@@ -4,6 +4,7 @@ import toast from 'react-hot-toast'
 import { useApp } from '@/context/AppContext'
 import * as api from '@/services/vocabApi'
 import type { VocabStats, VocabSession } from '@/types/word'
+import { MilestoneBadgesGrid, type MilestoneContext } from '@/components/home/ProgressMilestones'
 
 // ─── Achievement Definitions ─────────────────────────────────────
 
@@ -215,6 +216,15 @@ export function Achievements() {
 
       <XPSection stats={stats} sessionCount={sessions.length} />
       <StreakSection stats={stats} />
+      <MilestoneBadgesGrid context={{
+        totalWords: stats.total_words,
+        wordsMastered: stats.words_learned,
+        totalReviewed: stats.total_reviews,
+        streakDays: stats.streak.current,
+        daysUsed: stats.streak.total_days,
+        storiesRead: 0,
+        grammarLessons: 0,
+      } satisfies MilestoneContext} />
       <AchievementsGrid earned={earned} />
       <RecentMilestones earned={earned} />
     </div>

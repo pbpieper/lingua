@@ -4,6 +4,7 @@ import toast from 'react-hot-toast'
 import { useApp } from '@/context/AppContext'
 import { getWords, startSession, endSession, submitReview } from '@/services/vocabApi'
 import { isRTL } from '@/lib/csvParser'
+import { getLocalWords, shuffle as shuffleLocal } from '@/lib/localStore'
 import { fuzzyMatch } from '@/lib/textNormalize'
 import { useAdaptiveDifficulty } from '@/hooks/useAdaptiveDifficulty'
 import { AdaptiveBanner } from '@/components/atoms/AdaptiveBanner'
@@ -188,7 +189,7 @@ function buildStoryState(text: string, words: Word[]): StoryState | null {
 
 
 export function FillBlank() {
-  const { userId, currentListId, activeStudyWords, activeStudyVersion } = useApp()
+  const { userId, currentListId, activeStudyWords, activeStudyVersion, hubAvailable } = useApp()
   const adaptive = useAdaptiveDifficulty()
   const { addXP } = useXP()
 
@@ -258,6 +259,9 @@ export function FillBlank() {
       let fetched: Word[]
       if (activeStudyWords && activeStudyWords.length > 0) {
         fetched = activeStudyWords.slice(0, itemCount + 4)
+      } else if (!hubAvailable) {
+        // Offline: use locally stored words
+        fetched = shuffleLocal(getLocalWords()).slice(0, itemCount + 4)
       } else {
         fetched = await getWords(userId, { list_id: currentListId ?? undefined, limit: itemCount })
       }
@@ -276,21 +280,23 @@ export function FillBlank() {
         setInput('')
         setChecked(false)
         setCorrect(null)
-        const { session_id } = await startSession(userId, 'fillblank', currentListId ?? undefined)
-        sessionRef.current = session_id
+        if (hubAvailable) {
+          const { session_id } = await startSession(userId, 'fillblank', currentListId ?? undefined)
+          sessionRef.current = session_id
+        }
 
         // For story mode, generate a story after words are loaded
-        if (variation === 'story') {
+        if (variation === 'story' && hubAvailable) {
           // Don't await — let the loading spinner show in the story section
           doGenerateStory(ordered)
         }
       }
     } catch {
-      toast.error('Failed to load words')
+      if (hubAvailable) toast.error('Failed to load words')
     } finally {
       setLoading(false)
     }
-  }, [userId, currentListId, activeStudyWords, activeStudyVersion, variation, doGenerateStory, itemCount])
+  }, [userId, currentListId, activeStudyWords, activeStudyVersion, variation, doGenerateStory, itemCount, hubAvailable])
 
   useEffect(() => {
     fetchWords()
@@ -440,13 +446,30 @@ export function FillBlank() {
 
   if (words.length < 4) {
     return (
-      <div className="flex flex-col items-center justify-center py-20 gap-3">
-        <span className="text-lg font-semibold" style={{ color: 'var(--color-text-secondary)' }}>
-          Not enough words
-        </span>
-        <span className="text-sm" style={{ color: 'var(--color-text-muted)' }}>
-          Upload vocabulary first (need at least 4 words).
-        </span>
+      <div className="flex flex-col items-center justify-center py-20 gap-4">
+        {!hubAvailable ? (
+          <>
+            <div className="text-4xl opacity-40">&#9889;</div>
+            <span className="text-lg font-semibold" style={{ color: 'var(--color-text-primary)' }}>
+              Backend Offline
+            </span>
+            <span className="text-sm text-center max-w-sm" style={{ color: 'var(--color-text-muted)' }}>
+              Fill in the Blank needs the Creative Hub backend to load your vocabulary.
+            </span>
+            <span className="text-xs font-mono" style={{ color: 'var(--color-text-muted)' }}>
+              ~/Projects/creative-hub/scripts/start_services.sh all
+            </span>
+          </>
+        ) : (
+          <>
+            <span className="text-lg font-semibold" style={{ color: 'var(--color-text-secondary)' }}>
+              Not enough words
+            </span>
+            <span className="text-sm" style={{ color: 'var(--color-text-muted)' }}>
+              Upload vocabulary first (need at least 4 words).
+            </span>
+          </>
+        )}
       </div>
     )
   }

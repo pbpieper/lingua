@@ -58,7 +58,8 @@ export function Walkthrough() {
     const labels: Record<LinguaToolId, string> = {
       home: 'Home', wordbank: 'Word Bank', upload: 'Upload', media: 'Media Library',
       flashcards: 'Flashcards', match: 'Match', fillblank: 'Fill Blank',
-      multichoice: 'Quiz', speaking: 'Speaking', reading: 'Reading',
+      multichoice: 'Quiz', speedtyping: 'Speed Typing', wordassociation: 'Word Association',
+      speaking: 'Speaking', reading: 'Reading',
       prelearn: 'Pre-Learn', listening: 'Listening', writing: 'Writing', cloze: 'Sentence Cloze',
       stories: 'Stories', grammar: 'Grammar', phrases: 'Phrases', universe: 'Universe', teacher: 'Teacher', community: 'Community', achievements: 'Achievements', dashboard: 'Progress', 'feedback-admin': 'Feedback', settings: 'Settings',
     }

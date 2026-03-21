@@ -662,7 +662,16 @@ function FillBlankView({ chunks }: { chunks: MediaChunk[] }) {
         })}
       </div>
       {allDone && (
-        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="mt-4 p-3 rounded-lg bg-green-50 text-green-800 text-sm font-medium text-center border border-green-200">
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          className="mt-4 p-3 rounded-lg text-sm font-medium text-center"
+          style={{
+            background: 'rgba(34, 197, 94, 0.1)',
+            color: 'var(--color-success, #22c55e)',
+            border: '1px solid var(--color-success, #22c55e)',
+          }}
+        >
           All blanks filled correctly!
         </motion.div>
       )}
@@ -792,7 +801,16 @@ function MemorizeView({ chunks, language, onUpdateMastery }: { chunks: MediaChun
         </motion.div>
       )}
       {rating !== null && (
-        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="mt-4 p-3 rounded-lg bg-green-50 text-green-800 text-sm font-medium text-center border border-green-200">
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          className="mt-4 p-3 rounded-lg text-sm font-medium text-center"
+          style={{
+            background: 'rgba(34, 197, 94, 0.1)',
+            color: 'var(--color-success, #22c55e)',
+            border: '1px solid var(--color-success, #22c55e)',
+          }}
+        >
           Rated {rating}/5. Mastery updated!
         </motion.div>
       )}
@@ -1067,7 +1085,12 @@ function ReaderView({ item, wordBank, onBack, onRefresh }: {
               toast.success('Deleted')
             }
           }}
-          className="px-3 py-1.5 rounded-lg text-xs text-red-500 border border-red-200 bg-red-50 cursor-pointer hover:bg-red-100"
+          className="px-3 py-1.5 rounded-lg text-xs cursor-pointer transition-opacity hover:opacity-80"
+          style={{
+            color: 'var(--color-error, #ef4444)',
+            border: '1px solid var(--color-error, #ef4444)',
+            background: 'rgba(239, 68, 68, 0.06)',
+          }}
         >
           Delete Media
         </button>

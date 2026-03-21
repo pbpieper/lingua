@@ -22,7 +22,7 @@ import { useLearningLocales } from '@/hooks/useLearningLocales'
 type Phase = 'start' | 'generating' | 'practice' | 'finished'
 
 export function ClozePractice() {
-  const { userId, currentListId, lists } = useApp()
+  const { userId, currentListId, lists, hubAvailable } = useApp()
   const { addXP } = useXP()
   const { targetLocale, nativeName } = useLearningLocales()
   const [phase, setPhase] = useState<Phase>('start')
@@ -228,9 +228,23 @@ export function ClozePractice() {
           Practice vocabulary in context. AI generates sentences with your words, then you fill in the blanks.
         </p>
         <div className="flex flex-col gap-3 w-full max-w-xs">
+          {!hubAvailable && (
+            <div
+              className="flex items-center gap-2 px-4 py-2.5 rounded-lg text-xs"
+              style={{
+                background: 'var(--color-accent-light)',
+                border: '1px solid var(--color-accent-dark)',
+                color: 'var(--color-accent-dark)',
+              }}
+            >
+              <span>&#9889;</span>
+              <span>Backend offline. Generation requires the Creative Hub.</span>
+            </div>
+          )}
           <button
             onClick={handleGenerate}
-            className="px-6 py-3 rounded-xl text-sm font-semibold text-white cursor-pointer"
+            disabled={!hubAvailable}
+            className="px-6 py-3 rounded-xl text-sm font-semibold text-white cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
             style={{ background: 'var(--color-primary-main)' }}
           >
             Generate New Sentences

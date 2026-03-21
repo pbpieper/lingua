@@ -6,6 +6,7 @@ import { AppShell } from '@/components/layout/AppShell'
 import { Onboarding, type OnboardingData } from '@/components/onboarding/Onboarding'
 import { Toaster } from 'react-hot-toast'
 import { XPNotificationHost } from '@/components/atoms/XPNotification'
+import { LevelUpCelebration } from '@/components/atoms/LevelUpCelebration'
 import * as api from '@/services/vocabApi'
 import { getStarterPack } from '@/data/starterPacks'
 
@@ -117,6 +118,7 @@ export default function App() {
         <AppProvider>
           <AppContent />
           <XPNotificationHost />
+          <LevelUpCelebration />
           <Toaster position="bottom-right" />
         </AppProvider>
       </AuthProvider>

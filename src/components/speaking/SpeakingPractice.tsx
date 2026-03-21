@@ -428,7 +428,7 @@ function ConversationMode({ userId, hubAvailable, targetLanguage, ...rest }: { u
     const text = input.trim()
     if (!text || sending) return
     if (!hubAvailable) {
-      toast.error('Creative Hub backend is offline')
+      toast.error('Connect an AI backend in Settings to chat')
       return
     }
 
@@ -464,7 +464,7 @@ function ConversationMode({ userId, hubAvailable, targetLanguage, ...rest }: { u
 
   const handleStartConversation = async () => {
     if (!hubAvailable) {
-      toast.error('Creative Hub backend is offline')
+      toast.error('Connect an AI backend in Settings to chat')
       return
     }
     setSending(true)
@@ -540,8 +540,8 @@ function ConversationMode({ userId, hubAvailable, targetLanguage, ...rest }: { u
                   color: 'var(--color-text-secondary)',
                 }}
               >
-                AI conversation requires the Creative Hub backend.
-                Pronunciation practice is still available using browser TTS.
+                AI conversation needs a connected backend (set up in Settings).
+                Pronunciation practice works without AI using browser speech.
               </div>
             )}
           </div>
@@ -597,7 +597,7 @@ function ConversationMode({ userId, hubAvailable, targetLanguage, ...rest }: { u
           value={input}
           onChange={e => setInput(e.target.value)}
           onKeyDown={handleKeyDown}
-          placeholder={hubAvailable ? 'Type your message...' : 'Backend offline'}
+          placeholder={hubAvailable ? 'Type your message...' : 'AI not connected'}
           disabled={!hubAvailable || sending}
           className="flex-1 px-4 py-2.5 rounded-lg text-sm
             focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-main)]

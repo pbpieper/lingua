@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import toast from 'react-hot-toast'
+import { useApp } from '@/context/AppContext'
 import { generatePhraseScenario } from '@/services/vocabApi'
 import type { PhraseScenario, PhraseEntry, DialogueLine } from '@/services/vocabApi'
 import { useLearningLocales } from '@/hooks/useLearningLocales'
@@ -26,6 +27,7 @@ type Phase = 'picker' | 'loading' | 'scenario'
 type View = 'phrases' | 'dialogue' | 'practice'
 
 export function PhrasePractice() {
+  const { hubAvailable } = useApp()
   const { targetName, nativeName } = useLearningLocales()
   const [phase, setPhase] = useState<Phase>('picker')
   const [language, setLanguage] = useState(targetName || 'German')
@@ -148,13 +150,28 @@ export function PhrasePractice() {
           />
         </div>
 
+        {/* Offline indicator */}
+        {!hubAvailable && (
+          <div
+            className="flex items-center gap-2 px-4 py-2.5 rounded-lg text-xs"
+            style={{
+              background: 'var(--color-accent-light)',
+              border: '1px solid var(--color-accent-dark)',
+              color: 'var(--color-accent-dark)',
+            }}
+          >
+            <span>&#9889;</span>
+            <span>Phrase generation requires the AI backend. Start the Creative Hub first.</span>
+          </div>
+        )}
+
         <button
           onClick={handleGenerate}
-          disabled={!customSituation.trim() && !selectedSituation}
+          disabled={(!customSituation.trim() && !selectedSituation) || !hubAvailable}
           className="w-full py-3 rounded-xl text-white font-bold text-sm cursor-pointer border-none transition-opacity"
           style={{
             background: 'var(--color-primary-main)',
-            opacity: (!customSituation.trim() && !selectedSituation) ? 0.5 : 1,
+            opacity: ((!customSituation.trim() && !selectedSituation) || !hubAvailable) ? 0.5 : 1,
           }}
         >
           Generate Phrases
@@ -311,10 +328,10 @@ export function PhrasePractice() {
                   {checked && (
                     <div className="text-xs">
                       {isCorrect ? (
-                        <span className="text-green-500 font-semibold">Correct!</span>
+                        <span className="font-semibold" style={{ color: 'var(--color-success, #22c55e)' }}>Correct!</span>
                       ) : (
                         <div>
-                          <span className="text-red-400">Answer: </span>
+                          <span style={{ color: 'var(--color-error, #ef4444)' }}>Answer: </span>
                           <span className="font-semibold text-[var(--color-text-primary)]">{p.phrase}</span>
                         </div>
                       )}

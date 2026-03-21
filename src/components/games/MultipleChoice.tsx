@@ -4,6 +4,7 @@ import toast from 'react-hot-toast'
 import { useApp } from '@/context/AppContext'
 import { getWords, startSession, endSession, submitReview } from '@/services/vocabApi'
 import { isRTL } from '@/lib/csvParser'
+import { getLocalWords, shuffle as shuffleLocal } from '@/lib/localStore'
 import { fuzzyMatch } from '@/lib/textNormalize'
 import { useAdaptiveDifficulty } from '@/hooks/useAdaptiveDifficulty'
 import { AdaptiveBanner } from '@/components/atoms/AdaptiveBanner'
@@ -64,7 +65,7 @@ function buildQuestions(words: Word[], mode: 'forward' | 'reverse'): Question[] 
 }
 
 export function MultipleChoice() {
-  const { userId, currentListId, activeStudyWords, activeStudyVersion } = useApp()
+  const { userId, currentListId, activeStudyWords, activeStudyVersion, hubAvailable } = useApp()
   const adaptive = useAdaptiveDifficulty()
   const { addXP } = useXP()
   const { targetLocale, nativeLocale } = useLearningLocales()
@@ -97,16 +98,19 @@ export function MultipleChoice() {
       let fetched: Word[]
       if (activeStudyWords && activeStudyWords.length > 0) {
         fetched = activeStudyWords.slice(0, 36)
+      } else if (!hubAvailable) {
+        // Offline: use locally stored words
+        fetched = shuffleLocal(getLocalWords()).slice(0, 30)
       } else {
         fetched = await getWords(userId, { list_id: currentListId ?? undefined, limit: 30 })
       }
       setWords(fetched)
-    } catch (e) {
-      toast.error('Failed to load words')
+    } catch {
+      if (hubAvailable) toast.error('Failed to load words')
     } finally {
       setLoading(false)
     }
-  }, [userId, currentListId, activeStudyWords, activeStudyVersion])
+  }, [userId, currentListId, activeStudyWords, activeStudyVersion, hubAvailable])
 
   useEffect(() => {
     fetchWords()
@@ -120,9 +124,11 @@ export function MultipleChoice() {
     let cancelled = false
     ;(async () => {
       try {
-        const { session_id } = await startSession(userId, 'multichoice', currentListId ?? undefined)
-        if (cancelled) return
-        sessionRef.current = session_id
+        if (hubAvailable) {
+          const { session_id } = await startSession(userId, 'multichoice', currentListId ?? undefined)
+          if (cancelled) return
+          sessionRef.current = session_id
+        }
         setQuestions(buildQuestions(words, quizDirection))
         setQIndex(0)
         setSelected(null)
@@ -132,7 +138,7 @@ export function MultipleChoice() {
         setTypingChecked(false)
         setTypingCorrect(null)
       } catch {
-        if (!cancelled) toast.error('Failed to start session')
+        if (!cancelled && hubAvailable) toast.error('Failed to start session')
       }
     })()
     return () => { cancelled = true }
@@ -271,13 +277,30 @@ export function MultipleChoice() {
 
   if (words.length < 4) {
     return (
-      <div className="flex flex-col items-center justify-center py-20 gap-3">
-        <span className="text-lg font-semibold" style={{ color: 'var(--color-text-secondary)' }}>
-          Not enough words
-        </span>
-        <span className="text-sm" style={{ color: 'var(--color-text-muted)' }}>
-          Upload vocabulary first (need at least 4 words).
-        </span>
+      <div className="flex flex-col items-center justify-center py-20 gap-4">
+        {!hubAvailable ? (
+          <>
+            <div className="text-4xl opacity-40">&#9889;</div>
+            <span className="text-lg font-semibold" style={{ color: 'var(--color-text-primary)' }}>
+              Backend Offline
+            </span>
+            <span className="text-sm text-center max-w-sm" style={{ color: 'var(--color-text-muted)' }}>
+              Multiple Choice needs the Creative Hub backend to load your vocabulary.
+            </span>
+            <span className="text-xs font-mono" style={{ color: 'var(--color-text-muted)' }}>
+              ~/Projects/creative-hub/scripts/start_services.sh all
+            </span>
+          </>
+        ) : (
+          <>
+            <span className="text-lg font-semibold" style={{ color: 'var(--color-text-secondary)' }}>
+              Not enough words
+            </span>
+            <span className="text-sm" style={{ color: 'var(--color-text-muted)' }}>
+              Upload vocabulary first (need at least 4 words).
+            </span>
+          </>
+        )}
       </div>
     )
   }

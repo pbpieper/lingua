@@ -4,6 +4,7 @@ import toast from 'react-hot-toast'
 import { useApp } from '@/context/AppContext'
 import { getWords, startSession, endSession, submitReview } from '@/services/vocabApi'
 import { isRTL } from '@/lib/csvParser'
+import { getLocalWords, shuffle as shuffleLocal } from '@/lib/localStore'
 import { useAdaptiveDifficulty } from '@/hooks/useAdaptiveDifficulty'
 import { AdaptiveBanner } from '@/components/atoms/AdaptiveBanner'
 import { ToolOptionsBar } from '@/components/atoms/ToolOptionsBar'
@@ -137,7 +138,7 @@ function formatTime(seconds: number): string {
 }
 
 export function MatchGame() {
-  const { userId, currentListId, activeStudyWords, activeStudyVersion } = useApp()
+  const { userId, currentListId, activeStudyWords, activeStudyVersion, hubAvailable } = useApp()
   const adaptive = useAdaptiveDifficulty()
   const { addXP } = useXP()
 
@@ -186,21 +187,26 @@ export function MatchGame() {
       let fetched: Word[]
       if (activeStudyWords && activeStudyWords.length > 0) {
         fetched = activeStudyWords.slice(0, pairCount)
+      } else if (!hubAvailable) {
+        // Offline: use locally stored words
+        fetched = shuffleLocal(getLocalWords()).slice(0, pairCount)
       } else {
         fetched = await getWords(userId, { list_id: currentListId ?? undefined, limit: pairCount })
       }
       setWords(fetched)
       if (fetched.length >= 4) {
         setCards(buildCards(fetched))
-        const { session_id } = await startSession(userId, 'match', currentListId ?? undefined)
-        sessionRef.current = session_id
+        if (hubAvailable) {
+          const { session_id } = await startSession(userId, 'match', currentListId ?? undefined)
+          sessionRef.current = session_id
+        }
       }
-    } catch (e) {
-      toast.error('Failed to load words')
+    } catch {
+      if (hubAvailable) toast.error('Failed to load words')
     } finally {
       setLoading(false)
     }
-  }, [userId, currentListId, activeStudyWords, activeStudyVersion])
+  }, [userId, currentListId, activeStudyWords, activeStudyVersion, hubAvailable, pairCount])
 
   useEffect(() => {
     fetchWords()
@@ -317,13 +323,30 @@ export function MatchGame() {
 
   if (words.length < 4) {
     return (
-      <div className="flex flex-col items-center justify-center py-20 gap-3">
-        <span className="text-lg font-semibold" style={{ color: 'var(--color-text-secondary)' }}>
-          Not enough words
-        </span>
-        <span className="text-sm" style={{ color: 'var(--color-text-muted)' }}>
-          Upload vocabulary first (need at least 4 words).
-        </span>
+      <div className="flex flex-col items-center justify-center py-20 gap-4">
+        {!hubAvailable ? (
+          <>
+            <div className="text-4xl opacity-40">&#9889;</div>
+            <span className="text-lg font-semibold" style={{ color: 'var(--color-text-primary)' }}>
+              Backend Offline
+            </span>
+            <span className="text-sm text-center max-w-sm" style={{ color: 'var(--color-text-muted)' }}>
+              Match Game needs the Creative Hub backend to load your vocabulary.
+            </span>
+            <span className="text-xs font-mono" style={{ color: 'var(--color-text-muted)' }}>
+              ~/Projects/creative-hub/scripts/start_services.sh all
+            </span>
+          </>
+        ) : (
+          <>
+            <span className="text-lg font-semibold" style={{ color: 'var(--color-text-secondary)' }}>
+              Not enough words
+            </span>
+            <span className="text-sm" style={{ color: 'var(--color-text-muted)' }}>
+              Upload vocabulary first (need at least 4 words).
+            </span>
+          </>
+        )}
       </div>
     )
   }

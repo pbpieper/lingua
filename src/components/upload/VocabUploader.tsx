@@ -26,7 +26,7 @@ const LANGUAGES = [
 type Phase = 'input' | 'preview' | 'done'
 
 export function VocabUploader() {
-  const { userId, refreshLists, setActiveTool, setTotalWords, totalWords } = useApp()
+  const { userId, hubAvailable, refreshLists, setActiveTool, setTotalWords, totalWords } = useApp()
   const { prefs } = usePreferences()
 
   const [phase, setPhase] = useState<Phase>('input')
@@ -375,14 +375,21 @@ export function VocabUploader() {
         </div>
         <button
           onClick={handleAiGenerate}
-          disabled={aiLoading || !aiTopic.trim()}
+          disabled={aiLoading || !aiTopic.trim() || !hubAvailable}
           className="px-5 py-2 rounded-lg font-medium text-sm cursor-pointer
             bg-[var(--color-accent)] text-white hover:opacity-90
             disabled:opacity-50 transition-opacity"
         >
-          {aiLoading ? 'Generating...' : 'Generate'}
+          {aiLoading ? 'Generating...' : !hubAvailable ? 'AI Offline' : 'Generate'}
         </button>
       </div>
+
+      {!hubAvailable && (
+        <div className="rounded-lg px-3 py-2 text-xs mb-4"
+          style={{ background: 'var(--color-accent-faded)', border: '1px solid var(--color-accent-light)', color: 'var(--color-text-secondary)' }}>
+          AI vocabulary generation requires a connected backend. You can still import words manually using the text area or file upload below.
+        </div>
+      )}
 
       {/* Drop zone */}
       <div

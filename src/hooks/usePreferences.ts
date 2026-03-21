@@ -10,6 +10,9 @@ export interface Preferences {
   walkthroughDone: boolean
   showAllTools: boolean
   newWordsPerDay: number
+  fontSize: string
+  difficulty: string
+  sessionLength: number
 }
 
 const STORAGE_KEY = 'lingua-preferences'
@@ -24,6 +27,9 @@ const DEFAULTS: Preferences = {
   walkthroughDone: false,
   showAllTools: false,
   newWordsPerDay: 10,
+  fontSize: 'medium',
+  difficulty: 'normal',
+  sessionLength: 15,
 }
 
 /** Legacy keys that were used before consolidation */

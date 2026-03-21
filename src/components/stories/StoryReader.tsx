@@ -109,7 +109,7 @@ function QuestionCard({ q, index }: { q: StoryQuestion; index: number }) {
 type View = 'library' | 'generate' | 'reading'
 
 export function StoryReader() {
-  const { userId } = useApp()
+  const { userId, hubAvailable } = useApp()
   const { targetLocale, nativeName } = useLearningLocales()
 
   const [view, setView] = useState<View>('library')
@@ -394,10 +394,25 @@ export function StoryReader() {
           </div>
         </div>
 
+        {/* Offline indicator */}
+        {!hubAvailable && (
+          <div
+            className="flex items-center gap-2 px-4 py-2.5 rounded-lg text-xs"
+            style={{
+              background: 'var(--color-accent-light)',
+              border: '1px solid var(--color-accent-dark)',
+              color: 'var(--color-accent-dark)',
+            }}
+          >
+            <span>&#9889;</span>
+            <span>Story generation requires the AI backend. Start the Creative Hub first.</span>
+          </div>
+        )}
+
         {/* Generate button */}
         <button
           onClick={handleGenerate}
-          disabled={generating || !topic.trim()}
+          disabled={generating || !topic.trim() || !hubAvailable}
           className="px-6 py-2.5 rounded-lg font-medium text-sm cursor-pointer text-white hover:opacity-90 disabled:opacity-50 transition-opacity flex items-center gap-2"
           style={{ background: 'var(--color-primary-main)' }}
         >

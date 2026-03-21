@@ -13,6 +13,8 @@ export type LinguaToolId =
   | 'listening'
   | 'writing'
   | 'cloze'
+  | 'speedtyping'
+  | 'wordassociation'
   | 'stories'
   | 'grammar'
   | 'phrases'
@@ -67,6 +69,8 @@ export const TOOLS: ToolDef[] = [
   { id: 'match', label: 'Match', icon: '\u{1F517}', description: 'Match words to translations', category: 'practice', practiceGroup: 'games' },
   { id: 'fillblank', label: 'Fill Blank', icon: '\u270F\uFE0F', description: 'Complete the sentence', category: 'practice', practiceGroup: 'games' },
   { id: 'multichoice', label: 'Quiz', icon: '\u2753', description: 'Multiple choice quiz', category: 'practice', practiceGroup: 'games' },
+  { id: 'speedtyping', label: 'Speed Typing', icon: '\u{26A1}', description: 'Translate words against the clock', category: 'practice', practiceGroup: 'games' },
+  { id: 'wordassociation', label: 'Word Association', icon: '\u{1F50D}', description: 'Find related words from your vocabulary', category: 'practice', practiceGroup: 'games' },
   { id: 'flashcards', label: 'Flashcards', icon: '\u{1F0CF}', description: 'Spaced repetition review', category: 'practice', practiceGroup: 'games' },
 
   // --- Track ---

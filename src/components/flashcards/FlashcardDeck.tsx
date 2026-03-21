@@ -7,6 +7,7 @@ import * as api from '@/services/vocabApi'
 import { useXP } from '@/hooks/useXP'
 import { fuzzyMatch } from '@/lib/textNormalize'
 import { isRTL } from '@/lib/csvParser'
+import { getLocalWords } from '@/lib/localStore'
 import type { Word } from '@/types/word'
 
 type FlashcardMode = 'recognition' | 'production'
@@ -119,6 +120,9 @@ export function FlashcardDeck() {
         let fetchedWords: Word[]
         if (activeStudyWords && activeStudyWords.length > 0) {
           fetchedWords = activeStudyWords.slice(0, 40)
+        } else if (!hubAvailable) {
+          // Offline: use locally stored words from starter pack
+          fetchedWords = shuffle(getLocalWords()).slice(0, 20)
         } else if (practiceMode && currentListId) {
           // Practice mode: load random words from the word bank
           fetchedWords = await api.getWords(userId, { list_id: currentListId, limit: 20 })
@@ -148,11 +152,16 @@ export function FlashcardDeck() {
           return
         }
 
-        const { session_id } = await api.startSession(userId, 'flashcards', currentListId ?? undefined)
+        // Start a session (skip if offline — no backend to track it)
+        let sid: number | null = null
+        if (hubAvailable) {
+          const { session_id } = await api.startSession(userId, 'flashcards', currentListId ?? undefined)
+          sid = session_id
+        }
         if (cancelled) return
 
         setWords(filtered)
-        setSessionId(session_id)
+        setSessionId(sid)
         setStats({ reviewed: 0, correct: 0, wrong: 0, startTime: Date.now() })
         setCurrentIndex(0)
         setFlipped(false)
@@ -215,10 +224,12 @@ export function FlashcardDeck() {
     setIsSubmitting(true)
     const isCorrect = quality >= 3
 
-    try {
-      await api.submitReview({ word_id: word.id, quality, user_id: userId })
-    } catch {
-      toast.error('Failed to submit review')
+    if (hubAvailable) {
+      try {
+        await api.submitReview({ word_id: word.id, quality, user_id: userId })
+      } catch {
+        // non-critical in offline-capable mode
+      }
     }
 
     addXP(1, 'flashcard_review')
@@ -353,18 +364,15 @@ export function FlashcardDeck() {
       <div className="flex flex-col items-center justify-center py-24 gap-5">
         {!hubAvailable ? (
           <>
-            <div className="text-5xl opacity-40">&#9889;</div>
+            <div className="text-5xl opacity-40">&#128218;</div>
             <h2
               className="text-xl font-semibold"
               style={{ color: 'var(--color-text-primary)' }}
             >
-              Backend Offline
+              No words yet
             </h2>
             <p className="text-sm text-center max-w-sm" style={{ color: 'var(--color-text-muted)' }}>
-              Flashcards need the Creative Hub backend to load your vocabulary. Start the backend to review your words.
-            </p>
-            <p className="text-xs font-mono" style={{ color: 'var(--color-text-muted)' }}>
-              ~/Projects/creative-hub/scripts/start_services.sh all
+              Add some vocabulary first! Go to the Word Bank or upload a word list to start practicing with flashcards.
             </p>
           </>
         ) : (

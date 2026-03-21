@@ -71,7 +71,7 @@ function ComprehensionBadge({ estimate }: { estimate: number }) {
 }
 
 export function PreLearnPipeline() {
-  const { userId, refreshLists, setActiveTool, setCurrentListId } = useApp()
+  const { userId, hubAvailable, refreshLists, setActiveTool, setCurrentListId } = useApp()
   const { prefs } = usePreferences()
 
   const [phase, setPhase] = useState<Phase>('input')
@@ -417,6 +417,14 @@ export function PreLearnPipeline() {
         Paste a text to discover unknown words and create a study set before reading.
       </p>
 
+      {!hubAvailable && (
+        <div className="rounded-lg px-4 py-3 text-sm mb-4"
+          style={{ background: 'var(--color-accent-faded)', border: '1px solid var(--color-accent-light)', color: 'var(--color-text-secondary)' }}>
+          <strong>AI required:</strong> Text analysis needs a connected AI backend.
+          You can set one up in Settings, or use the Vocab Uploader to add words manually.
+        </div>
+      )}
+
       {/* Language selectors */}
       <div className="flex gap-3 mb-4">
         <div className="flex-1">
@@ -507,12 +515,12 @@ export function PreLearnPipeline() {
 
       <button
         onClick={handleAnalyze}
-        disabled={!rawText.trim() || analyzing}
+        disabled={!rawText.trim() || analyzing || !hubAvailable}
         className="px-6 py-2.5 rounded-lg font-medium text-sm cursor-pointer
           bg-[var(--color-primary-main)] text-white hover:opacity-90
           disabled:opacity-50 transition-opacity"
       >
-        {analyzing ? 'Analyzing...' : 'Analyze Text'}
+        {analyzing ? 'Analyzing...' : !hubAvailable ? 'Connect AI to Analyze' : 'Analyze Text'}
       </button>
     </div>
   )

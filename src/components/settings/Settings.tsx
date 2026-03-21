@@ -3,12 +3,15 @@ import toast from 'react-hot-toast'
 import { useApp } from '@/context/AppContext'
 import { useAuth } from '@/context/AuthContext'
 import { usePreferences } from '@/hooks/usePreferences'
+import { useTheme } from '@/design/theme'
 import * as api from '@/services/vocabApi'
 import { getHubUrl, setHubUrl } from '@/services/aiConfig'
 import { syncToCloud, syncFromCloud, getSyncStatus, exportUserData } from '@/services/dataSync'
 import { isSupabaseConfigured } from '@/services/supabase'
 import { AuthModal } from '@/components/auth/AuthModal'
 import type { WordInput } from '@/types/word'
+
+/* ── Constants ─────────────────────────────────────── */
 
 interface OnboardingData {
   targetLang?: string
@@ -18,19 +21,168 @@ interface OnboardingData {
 }
 
 const DAILY_GOAL_OPTIONS = [5, 10, 15, 20, 30, 50]
+const SESSION_LENGTH_OPTIONS = [5, 10, 15, 20, 30]
+const FONT_SIZE_OPTIONS = [
+  { value: 'small', label: 'Small' },
+  { value: 'medium', label: 'Medium' },
+  { value: 'large', label: 'Large' },
+]
+const DIFFICULTY_OPTIONS = [
+  { value: 'easy', label: 'Relaxed', desc: 'More hints, gentler spacing' },
+  { value: 'normal', label: 'Balanced', desc: 'Standard spaced repetition' },
+  { value: 'hard', label: 'Challenge', desc: 'Fewer hints, tighter intervals' },
+]
+
+const APP_VERSION = '0.2.0'
+
+/* ── Toggle Component ──────────────────────────────── */
+
+function Toggle({ checked, onChange, label, description }: {
+  checked: boolean
+  onChange: (v: boolean) => void
+  label: string
+  description?: string
+}) {
+  return (
+    <div className="flex items-center justify-between">
+      <div>
+        <label className="block text-sm font-medium text-[var(--color-text-primary)]">
+          {label}
+        </label>
+        {description && (
+          <p className="text-xs text-[var(--color-text-muted)]">{description}</p>
+        )}
+      </div>
+      <button
+        onClick={() => onChange(!checked)}
+        role="switch"
+        aria-checked={checked}
+        className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors cursor-pointer ${
+          checked ? 'bg-[var(--color-primary-main)]' : 'bg-[var(--color-border)]'
+        }`}
+      >
+        <span
+          className={`inline-block h-4 w-4 rounded-full bg-white transition-transform ${
+            checked ? 'translate-x-6' : 'translate-x-1'
+          }`}
+        />
+      </button>
+    </div>
+  )
+}
+
+/* ── Section Header ────────────────────────────────── */
+
+function SectionCard({ title, children, danger }: {
+  title: string
+  children: React.ReactNode
+  danger?: boolean
+}) {
+  return (
+    <section className={`rounded-xl border p-5 ${
+      danger
+        ? 'border-[var(--color-incorrect)] bg-[var(--color-surface)]'
+        : 'border-[var(--color-border)] bg-[var(--color-surface)]'
+    }`}>
+      <h3 className={`text-sm font-semibold mb-4 ${
+        danger ? 'text-[var(--color-incorrect)]' : 'text-[var(--color-text-primary)]'
+      }`}>
+        {title}
+      </h3>
+      {children}
+    </section>
+  )
+}
+
+/* ── Confirm Button ────────────────────────────────── */
+
+function DangerAction({ label, description, confirmLabel, onConfirm }: {
+  label: string
+  description: string
+  confirmLabel: string
+  onConfirm: () => void
+}) {
+  const [confirming, setConfirming] = useState(false)
+  const [doubleConfirm, setDoubleConfirm] = useState(false)
+
+  if (doubleConfirm) {
+    return (
+      <div className="flex items-center gap-3 px-4 py-2.5 rounded-lg border border-[var(--color-incorrect)] bg-red-50">
+        <span className="text-sm text-[var(--color-incorrect)] font-medium flex-1">
+          This action is permanent. Are you absolutely sure?
+        </span>
+        <button
+          onClick={() => { onConfirm(); setDoubleConfirm(false); setConfirming(false) }}
+          className="px-3 py-1.5 rounded-md text-xs font-medium cursor-pointer
+            bg-[var(--color-incorrect)] text-white hover:opacity-90 transition-opacity"
+        >
+          {confirmLabel}
+        </button>
+        <button
+          onClick={() => { setDoubleConfirm(false); setConfirming(false) }}
+          className="px-3 py-1.5 rounded-md text-xs font-medium cursor-pointer
+            border border-[var(--color-border)] text-[var(--color-text-secondary)]
+            hover:bg-[var(--color-surface-alt)] transition-colors"
+        >
+          Cancel
+        </button>
+      </div>
+    )
+  }
+
+  if (confirming) {
+    return (
+      <div className="flex items-center gap-3 px-4 py-2.5 rounded-lg border border-[var(--color-incorrect)] bg-red-50">
+        <span className="text-sm text-[var(--color-incorrect)] font-medium flex-1">
+          Are you sure? This cannot be undone.
+        </span>
+        <button
+          onClick={() => setDoubleConfirm(true)}
+          className="px-3 py-1.5 rounded-md text-xs font-medium cursor-pointer
+            bg-[var(--color-incorrect)] text-white hover:opacity-90 transition-opacity"
+        >
+          Yes, continue
+        </button>
+        <button
+          onClick={() => setConfirming(false)}
+          className="px-3 py-1.5 rounded-md text-xs font-medium cursor-pointer
+            border border-[var(--color-border)] text-[var(--color-text-secondary)]
+            hover:bg-[var(--color-surface-alt)] transition-colors"
+        >
+          Cancel
+        </button>
+      </div>
+    )
+  }
+
+  return (
+    <button
+      onClick={() => setConfirming(true)}
+      className="w-full px-4 py-2.5 rounded-lg text-sm font-medium cursor-pointer
+        border border-[var(--color-incorrect)] text-[var(--color-incorrect)]
+        bg-[var(--color-bg)] hover:bg-red-50 transition-colors text-left"
+    >
+      {label}
+      <span className="block text-xs opacity-70 mt-0.5">{description}</span>
+    </button>
+  )
+}
+
+/* ── Main Settings Component ──────────────────────── */
 
 export function Settings() {
   const { userId, lists, refreshLists } = useApp()
   const { user, isAuthenticated, signOut } = useAuth()
-  const { prefs, setPref } = usePreferences()
+  const { prefs, setPref, resetPrefs } = usePreferences()
+  const { isDark, toggle: toggleTheme } = useTheme()
 
   // Auth modal
   const [authModalOpen, setAuthModalOpen] = useState(false)
   const [syncing, setSyncing] = useState(false)
   const [syncStatus, setSyncStatus] = useState(getSyncStatus)
 
-  // Profile
-  const [displayName, setDisplayName] = useState(prefs.userName)
+  // Profile (displayName used in data export)
+  const displayName = prefs.userName
   const [onboarding, setOnboarding] = useState<OnboardingData | null>(null)
 
   // Import state
@@ -43,9 +195,10 @@ export function Settings() {
   const defaultSourceLang = prefs.defaultLangFrom
   const defaultTargetLang = prefs.defaultLangTo
 
-  // Reset confirmation states
-  const [confirmResetProgress, setConfirmResetProgress] = useState(false)
-  const [confirmResetOnboarding, setConfirmResetOnboarding] = useState(false)
+  // Font size & difficulty & session length
+  const fontSize = prefs.fontSize || 'medium'
+  const difficulty = prefs.difficulty || 'normal'
+  const sessionLength = prefs.sessionLength || 15
 
   useEffect(() => {
     try {
@@ -94,16 +247,13 @@ export function Settings() {
     toast.success('Signed out')
   }
 
-  // Persist profile name
-  const handleNameSave = () => {
-    setPref('userName', displayName)
-    toast.success('Display name saved')
-  }
-
   const setDailyGoal = (v: number) => setPref('dailyGoal', v)
   const setAutoPlayTTS = (v: boolean) => setPref('autoPlayTts', v)
   const setDefaultSourceLang = (v: string) => setPref('defaultLangFrom', v)
   const setDefaultTargetLang = (v: string) => setPref('defaultLangTo', v)
+  const setFontSize = (v: string) => setPref('fontSize', v)
+  const setDifficulty = (v: string) => setPref('difficulty', v)
+  const setSessionLength = (v: number) => setPref('sessionLength', v)
 
   // Export all data as JSON
   const handleExportAll = async () => {
@@ -117,7 +267,7 @@ export function Settings() {
         userId,
         displayName,
         onboarding,
-        preferences: { dailyGoal, autoPlayTTS, defaultSourceLang, defaultTargetLang },
+        preferences: { dailyGoal, autoPlayTTS, defaultSourceLang, defaultTargetLang, fontSize, difficulty, sessionLength },
         lists,
         words,
         stats,
@@ -141,7 +291,6 @@ export function Settings() {
     try {
       await api.resetProgress(userId)
       toast.success('Progress has been reset')
-      setConfirmResetProgress(false)
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Reset failed')
     }
@@ -151,8 +300,16 @@ export function Settings() {
   const handleResetOnboarding = () => {
     localStorage.removeItem('lingua-onboarding')
     setOnboarding(null)
-    setConfirmResetOnboarding(false)
-    toast.success('Onboarding data cleared — reload to redo setup')
+    toast.success('Onboarding data cleared -- reload to redo setup')
+  }
+
+  // Clear all data
+  const handleClearAllData = () => {
+    const keys = Object.keys(localStorage).filter(k => k.startsWith('lingua-'))
+    keys.forEach(k => localStorage.removeItem(k))
+    resetPrefs()
+    toast.success('All data cleared. Reload to start fresh.')
+    setTimeout(() => window.location.reload(), 1200)
   }
 
   // Import data from JSON export
@@ -230,11 +387,8 @@ export function Settings() {
         Settings
       </h2>
 
-      {/* Account Section */}
-      <section className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-5">
-        <h3 className="text-sm font-semibold text-[var(--color-text-primary)] mb-4">
-          Account
-        </h3>
+      {/* ─── Account Section ───────────────────── */}
+      <SectionCard title="Account">
         {isAuthenticated && user ? (
           <div className="space-y-4">
             <div className="flex items-center gap-3">
@@ -275,18 +429,10 @@ export function Settings() {
                 </button>
               )}
               <button
-                onClick={handleExportUserData}
-                className="px-4 py-2 rounded-lg text-sm font-medium cursor-pointer
-                  border border-[var(--color-border)] text-[var(--color-text-primary)]
-                  bg-[var(--color-bg)] hover:bg-[var(--color-surface-alt)] transition-colors"
-              >
-                Export My Data
-              </button>
-              <button
                 onClick={handleSignOut}
                 className="px-4 py-2 rounded-lg text-sm font-medium cursor-pointer
-                  border border-[var(--color-incorrect)] text-[var(--color-incorrect)]
-                  bg-[var(--color-bg)] hover:bg-red-50 transition-colors"
+                  border border-[var(--color-border)] text-[var(--color-text-secondary)]
+                  bg-[var(--color-bg)] hover:bg-[var(--color-surface-alt)] transition-colors"
               >
                 Sign Out
               </button>
@@ -309,189 +455,174 @@ export function Settings() {
             </p>
           </div>
         )}
-      </section>
+      </SectionCard>
 
       <AuthModal open={authModalOpen} onClose={() => setAuthModalOpen(false)} />
 
-      {/* Profile Section */}
-      <section className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-5">
-        <h3 className="text-sm font-semibold text-[var(--color-text-primary)] mb-4">
-          Profile
-        </h3>
-        <div className="space-y-4">
-          {/* Display Name */}
+      {/* ─── AI Backend Section ────────────────── */}
+      <AIBackendSettings />
+
+      {/* ─── Learning Preferences ──────────────── */}
+      <SectionCard title="Learning Preferences">
+        <div className="space-y-6">
+          {/* Daily Word Target */}
           <div>
-            <label className="block text-xs font-medium text-[var(--color-text-muted)] mb-1">
-              Display Name
+            <label className="block text-xs font-medium text-[var(--color-text-muted)] mb-2">
+              Daily word target
             </label>
             <div className="flex gap-2">
-              <input
-                type="text"
-                value={displayName}
-                onChange={e => setDisplayName(e.target.value)}
-                placeholder="Enter your name..."
-                className="flex-1 px-3 py-2 rounded-lg border border-[var(--color-border)]
-                  bg-[var(--color-bg)] text-[var(--color-text-primary)] text-sm
-                  focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-main)]
-                  placeholder:text-[var(--color-text-muted)]"
-              />
-              <button
-                onClick={handleNameSave}
-                className="px-4 py-2 rounded-lg text-sm font-medium cursor-pointer
-                  bg-[var(--color-primary-main)] text-white hover:opacity-90 transition-opacity"
-              >
-                Save
-              </button>
+              {DAILY_GOAL_OPTIONS.map(v => (
+                <button
+                  key={v}
+                  onClick={() => setDailyGoal(v)}
+                  className={`flex-1 py-2 rounded-lg text-sm font-medium cursor-pointer transition-colors ${
+                    dailyGoal === v
+                      ? 'bg-[var(--color-primary-main)] text-white'
+                      : 'bg-[var(--color-bg)] text-[var(--color-text-secondary)] border border-[var(--color-border)] hover:bg-[var(--color-surface-alt)]'
+                  }`}
+                >
+                  {v}
+                </button>
+              ))}
             </div>
-          </div>
-
-          {/* User ID */}
-          <div>
-            <label className="block text-xs font-medium text-[var(--color-text-muted)] mb-1">
-              User ID
-            </label>
-            <p className="text-sm text-[var(--color-text-secondary)] font-mono bg-[var(--color-bg)] px-3 py-2 rounded-lg border border-[var(--color-border)]">
-              {userId}
+            <p className="text-xs text-[var(--color-text-muted)] mt-1.5">
+              New words to learn each day
             </p>
           </div>
 
-          {/* Onboarding data */}
-          {onboarding && (
-            <div>
-              <label className="block text-xs font-medium text-[var(--color-text-muted)] mb-2">
-                Onboarding Data
-              </label>
-              <div className="grid grid-cols-2 gap-3">
-                {onboarding.targetLang && (
-                  <div className="bg-[var(--color-bg)] px-3 py-2 rounded-lg border border-[var(--color-border)]">
-                    <span className="block text-xs text-[var(--color-text-muted)]">Target Language</span>
-                    <span className="text-sm text-[var(--color-text-primary)]">{onboarding.targetLang}</span>
-                  </div>
-                )}
-                {onboarding.nativeLang && (
-                  <div className="bg-[var(--color-bg)] px-3 py-2 rounded-lg border border-[var(--color-border)]">
-                    <span className="block text-xs text-[var(--color-text-muted)]">Native Language</span>
-                    <span className="text-sm text-[var(--color-text-primary)]">{onboarding.nativeLang}</span>
-                  </div>
-                )}
-                {onboarding.level && (
-                  <div className="bg-[var(--color-bg)] px-3 py-2 rounded-lg border border-[var(--color-border)]">
-                    <span className="block text-xs text-[var(--color-text-muted)]">Level</span>
-                    <span className="text-sm text-[var(--color-text-primary)]">{onboarding.level}</span>
-                  </div>
-                )}
-                {onboarding.goals && onboarding.goals.length > 0 && (
-                  <div className="bg-[var(--color-bg)] px-3 py-2 rounded-lg border border-[var(--color-border)]">
-                    <span className="block text-xs text-[var(--color-text-muted)]">Goals</span>
-                    <span className="text-sm text-[var(--color-text-primary)]">{onboarding.goals.join(', ')}</span>
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
-        </div>
-      </section>
-
-      {/* Preferences Section */}
-      <section className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-5">
-        <h3 className="text-sm font-semibold text-[var(--color-text-primary)] mb-4">
-          Preferences
-        </h3>
-        <div className="space-y-5">
-          {/* Daily Goal */}
+          {/* Session Length */}
           <div>
             <label className="block text-xs font-medium text-[var(--color-text-muted)] mb-2">
-              Daily Goal: <span className="text-[var(--color-primary-main)] font-semibold">{dailyGoal} words/day</span>
+              Session length
             </label>
-            <input
-              type="range"
-              min={0}
-              max={DAILY_GOAL_OPTIONS.length - 1}
-              value={DAILY_GOAL_OPTIONS.indexOf(dailyGoal)}
-              onChange={e => setDailyGoal(DAILY_GOAL_OPTIONS[Number(e.target.value)])}
-              className="w-full accent-[var(--color-primary-main)]"
-            />
-            <div className="flex justify-between text-xs text-[var(--color-text-muted)] mt-1">
-              {DAILY_GOAL_OPTIONS.map(v => (
-                <span key={v}>{v}</span>
+            <div className="flex gap-2">
+              {SESSION_LENGTH_OPTIONS.map(v => (
+                <button
+                  key={v}
+                  onClick={() => setSessionLength(v)}
+                  className={`flex-1 py-2 rounded-lg text-sm font-medium cursor-pointer transition-colors ${
+                    sessionLength === v
+                      ? 'bg-[var(--color-primary-main)] text-white'
+                      : 'bg-[var(--color-bg)] text-[var(--color-text-secondary)] border border-[var(--color-border)] hover:bg-[var(--color-surface-alt)]'
+                  }`}
+                >
+                  {v}m
+                </button>
+              ))}
+            </div>
+            <p className="text-xs text-[var(--color-text-muted)] mt-1.5">
+              Target study session duration in minutes
+            </p>
+          </div>
+
+          {/* Difficulty */}
+          <div>
+            <label className="block text-xs font-medium text-[var(--color-text-muted)] mb-2">
+              Difficulty
+            </label>
+            <div className="flex flex-col gap-2">
+              {DIFFICULTY_OPTIONS.map(opt => (
+                <button
+                  key={opt.value}
+                  onClick={() => setDifficulty(opt.value)}
+                  className={`px-4 py-3 rounded-lg text-left cursor-pointer transition-colors ${
+                    difficulty === opt.value
+                      ? 'bg-[var(--color-primary-pale)] border-2 border-[var(--color-primary-main)]'
+                      : 'bg-[var(--color-bg)] border border-[var(--color-border)] hover:bg-[var(--color-surface-alt)]'
+                  }`}
+                >
+                  <span className="text-sm font-medium text-[var(--color-text-primary)]">{opt.label}</span>
+                  <span className="block text-xs text-[var(--color-text-muted)] mt-0.5">{opt.desc}</span>
+                </button>
               ))}
             </div>
           </div>
 
-          {/* Default Source Language */}
-          <div>
-            <label className="block text-xs font-medium text-[var(--color-text-muted)] mb-1">
-              Default Source Language
-            </label>
-            <select
-              value={defaultSourceLang}
-              onChange={e => setDefaultSourceLang(e.target.value)}
-              className="w-full px-3 py-2 rounded-lg border border-[var(--color-border)]
-                bg-[var(--color-bg)] text-[var(--color-text-primary)] text-sm
-                focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-main)] cursor-pointer"
-            >
-              <option value="">Auto-detect</option>
-              {languages.map(lang => (
-                <option key={lang} value={lang}>{lang}</option>
-              ))}
-            </select>
-          </div>
-
-          {/* Default Target Language */}
-          <div>
-            <label className="block text-xs font-medium text-[var(--color-text-muted)] mb-1">
-              Default Target Language
-            </label>
-            <select
-              value={defaultTargetLang}
-              onChange={e => setDefaultTargetLang(e.target.value)}
-              className="w-full px-3 py-2 rounded-lg border border-[var(--color-border)]
-                bg-[var(--color-bg)] text-[var(--color-text-primary)] text-sm
-                focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-main)] cursor-pointer"
-            >
-              <option value="">Auto-detect</option>
-              {languages.map(lang => (
-                <option key={lang} value={lang}>{lang}</option>
-              ))}
-            </select>
+          {/* Default Languages */}
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs font-medium text-[var(--color-text-muted)] mb-1">
+                Default source language
+              </label>
+              <select
+                value={defaultSourceLang}
+                onChange={e => setDefaultSourceLang(e.target.value)}
+                className="w-full px-3 py-2 rounded-lg border border-[var(--color-border)]
+                  bg-[var(--color-bg)] text-[var(--color-text-primary)] text-sm
+                  focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-main)] cursor-pointer"
+              >
+                <option value="">Auto-detect</option>
+                {languages.map(lang => (
+                  <option key={lang} value={lang}>{lang}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-[var(--color-text-muted)] mb-1">
+                Default target language
+              </label>
+              <select
+                value={defaultTargetLang}
+                onChange={e => setDefaultTargetLang(e.target.value)}
+                className="w-full px-3 py-2 rounded-lg border border-[var(--color-border)]
+                  bg-[var(--color-bg)] text-[var(--color-text-primary)] text-sm
+                  focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-main)] cursor-pointer"
+              >
+                <option value="">Auto-detect</option>
+                {languages.map(lang => (
+                  <option key={lang} value={lang}>{lang}</option>
+                ))}
+              </select>
+            </div>
           </div>
 
           {/* Auto-play TTS */}
-          <div className="flex items-center justify-between">
-            <div>
-              <label className="block text-sm font-medium text-[var(--color-text-primary)]">
-                Auto-play TTS
-              </label>
-              <p className="text-xs text-[var(--color-text-muted)]">
-                Automatically play pronunciation audio in exercises
-              </p>
+          <Toggle
+            checked={autoPlayTTS}
+            onChange={setAutoPlayTTS}
+            label="Auto-play pronunciation"
+            description="Automatically play audio in exercises and flashcards"
+          />
+        </div>
+      </SectionCard>
+
+      {/* ─── Appearance ────────────────────────── */}
+      <SectionCard title="Appearance">
+        <div className="space-y-5">
+          <Toggle
+            checked={isDark}
+            onChange={() => toggleTheme()}
+            label="Dark mode"
+            description="Switch between light and dark theme"
+          />
+
+          {/* Font Size */}
+          <div>
+            <label className="block text-xs font-medium text-[var(--color-text-muted)] mb-2">
+              Font size
+            </label>
+            <div className="flex gap-2">
+              {FONT_SIZE_OPTIONS.map(opt => (
+                <button
+                  key={opt.value}
+                  onClick={() => setFontSize(opt.value)}
+                  className={`flex-1 py-2 rounded-lg font-medium cursor-pointer transition-colors ${
+                    fontSize === opt.value
+                      ? 'bg-[var(--color-primary-main)] text-white'
+                      : 'bg-[var(--color-bg)] text-[var(--color-text-secondary)] border border-[var(--color-border)] hover:bg-[var(--color-surface-alt)]'
+                  }`}
+                  style={{ fontSize: opt.value === 'small' ? '12px' : opt.value === 'large' ? '16px' : '14px' }}
+                >
+                  {opt.label}
+                </button>
+              ))}
             </div>
-            <button
-              onClick={() => setAutoPlayTTS(!autoPlayTTS)}
-              role="switch"
-              aria-checked={autoPlayTTS}
-              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors cursor-pointer ${
-                autoPlayTTS ? 'bg-[var(--color-primary-main)]' : 'bg-[var(--color-border)]'
-              }`}
-            >
-              <span
-                className={`inline-block h-4 w-4 rounded-full bg-white transition-transform ${
-                  autoPlayTTS ? 'translate-x-6' : 'translate-x-1'
-                }`}
-              />
-            </button>
           </div>
         </div>
-      </section>
+      </SectionCard>
 
-      {/* AI Backend Section */}
-      <AIBackendSettings />
-
-      {/* Data Management Section */}
-      <section className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-5">
-        <h3 className="text-sm font-semibold text-[var(--color-text-primary)] mb-4">
-          Data Management
-        </h3>
+      {/* ─── Data Management ───────────────────── */}
+      <SectionCard title="Data Management">
         <div className="space-y-3">
           {/* Export All */}
           <button
@@ -500,11 +631,25 @@ export function Settings() {
               border border-[var(--color-border)] text-[var(--color-text-primary)]
               bg-[var(--color-bg)] hover:bg-[var(--color-surface-alt)] transition-colors text-left"
           >
-            Export All Data
+            Export all data
             <span className="block text-xs text-[var(--color-text-muted)] mt-0.5">
               Download words, lists, and stats as JSON
             </span>
           </button>
+
+          {isAuthenticated && (
+            <button
+              onClick={handleExportUserData}
+              className="w-full px-4 py-2.5 rounded-lg text-sm font-medium cursor-pointer
+                border border-[var(--color-border)] text-[var(--color-text-primary)]
+                bg-[var(--color-bg)] hover:bg-[var(--color-surface-alt)] transition-colors text-left"
+            >
+              Export account data
+              <span className="block text-xs text-[var(--color-text-muted)] mt-0.5">
+                Download your synced cloud data
+              </span>
+            </button>
+          )}
 
           {/* Import Data */}
           <input
@@ -522,99 +667,67 @@ export function Settings() {
               bg-[var(--color-bg)] hover:bg-[var(--color-surface-alt)] transition-colors text-left
               disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {importProgress ?? 'Import Data'}
+            {importProgress ?? 'Import data'}
             <span className="block text-xs text-[var(--color-text-muted)] mt-0.5">
               Restore from a previously exported JSON file
             </span>
           </button>
 
-          {/* Reset Progress */}
-          {!confirmResetProgress ? (
-            <button
-              onClick={() => setConfirmResetProgress(true)}
-              className="w-full px-4 py-2.5 rounded-lg text-sm font-medium cursor-pointer
-                border border-[var(--color-incorrect)] text-[var(--color-incorrect)]
-                bg-[var(--color-bg)] hover:bg-red-50 transition-colors text-left"
-            >
-              Reset Progress
-              <span className="block text-xs opacity-70 mt-0.5">
-                Clear all review data (SM-2 intervals, streaks)
-              </span>
-            </button>
-          ) : (
-            <div className="flex items-center gap-3 px-4 py-2.5 rounded-lg border border-[var(--color-incorrect)] bg-red-50">
-              <span className="text-sm text-[var(--color-incorrect)] font-medium">
-                Are you sure? This cannot be undone.
-              </span>
-              <button
-                onClick={handleResetProgress}
-                className="px-3 py-1.5 rounded-md text-xs font-medium cursor-pointer
-                  bg-[var(--color-incorrect)] text-white hover:opacity-90 transition-opacity"
-              >
-                Yes, reset
-              </button>
-              <button
-                onClick={() => setConfirmResetProgress(false)}
-                className="px-3 py-1.5 rounded-md text-xs font-medium cursor-pointer
-                  border border-[var(--color-border)] text-[var(--color-text-secondary)]
-                  hover:bg-[var(--color-surface-alt)] transition-colors"
-              >
-                Cancel
-              </button>
-            </div>
-          )}
-
           {/* Reset Onboarding */}
-          {!confirmResetOnboarding ? (
-            <button
-              onClick={() => setConfirmResetOnboarding(true)}
-              className="w-full px-4 py-2.5 rounded-lg text-sm font-medium cursor-pointer
-                border border-[var(--color-incorrect)] text-[var(--color-incorrect)]
-                bg-[var(--color-bg)] hover:bg-red-50 transition-colors text-left"
-            >
-              Reset Onboarding
-              <span className="block text-xs opacity-70 mt-0.5">
-                Clear onboarding data and redo initial setup
-              </span>
-            </button>
-          ) : (
-            <div className="flex items-center gap-3 px-4 py-2.5 rounded-lg border border-[var(--color-incorrect)] bg-red-50">
-              <span className="text-sm text-[var(--color-incorrect)] font-medium">
-                Clear onboarding data?
-              </span>
-              <button
-                onClick={handleResetOnboarding}
-                className="px-3 py-1.5 rounded-md text-xs font-medium cursor-pointer
-                  bg-[var(--color-incorrect)] text-white hover:opacity-90 transition-opacity"
-              >
-                Yes, clear
-              </button>
-              <button
-                onClick={() => setConfirmResetOnboarding(false)}
-                className="px-3 py-1.5 rounded-md text-xs font-medium cursor-pointer
-                  border border-[var(--color-border)] text-[var(--color-text-secondary)]
-                  hover:bg-[var(--color-surface-alt)] transition-colors"
-              >
-                Cancel
-              </button>
-            </div>
-          )}
+          <button
+            onClick={handleResetOnboarding}
+            className="w-full px-4 py-2.5 rounded-lg text-sm font-medium cursor-pointer
+              border border-[var(--color-border)] text-[var(--color-text-secondary)]
+              bg-[var(--color-bg)] hover:bg-[var(--color-surface-alt)] transition-colors text-left"
+          >
+            Redo initial setup
+            <span className="block text-xs text-[var(--color-text-muted)] mt-0.5">
+              Clear onboarding data and restart the welcome flow
+            </span>
+          </button>
         </div>
-      </section>
+      </SectionCard>
 
-      {/* About Section */}
-      <section className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-5">
-        <h3 className="text-sm font-semibold text-[var(--color-text-primary)] mb-2">
-          About
-        </h3>
-        <p className="text-sm text-[var(--color-text-secondary)]">
-          <span className="font-medium">Lingua v0.1.0</span>
-        </p>
-        <p className="text-xs text-[var(--color-text-muted)] mt-1">
-          A vocabulary learning app with spaced repetition, mini-games, TTS, AI chat, and interactive reading.
-          Built on the Creative Hub backend.
-        </p>
-      </section>
+      {/* ─── About ─────────────────────────────── */}
+      <SectionCard title="About">
+        <div className="space-y-2">
+          <p className="text-sm text-[var(--color-text-primary)]">
+            <span className="font-semibold">Lingua</span>{' '}
+            <span className="text-[var(--color-text-muted)]">v{APP_VERSION}</span>
+          </p>
+          <p className="text-xs text-[var(--color-text-muted)] leading-relaxed">
+            A vocabulary learning app with spaced repetition, mini-games,
+            text-to-speech, AI chat, and interactive reading.
+            Works offline with browser TTS and local flashcards.
+          </p>
+          <div className="flex gap-4 pt-1">
+            <span className="text-xs text-[var(--color-text-muted)]">
+              Built with React + Vite
+            </span>
+            <span className="text-xs text-[var(--color-text-muted)]">
+              AI features available
+            </span>
+          </div>
+        </div>
+      </SectionCard>
+
+      {/* ─── Danger Zone ───────────────────────── */}
+      <SectionCard title="Danger Zone" danger>
+        <div className="space-y-3">
+          <DangerAction
+            label="Reset learning progress"
+            description="Clear all review data (study streaks and review schedules). Your words and lists are kept."
+            confirmLabel="Yes, reset progress"
+            onConfirm={handleResetProgress}
+          />
+          <DangerAction
+            label="Delete all data"
+            description="Remove all words, lists, progress, and preferences. This is permanent."
+            confirmLabel="Yes, delete everything"
+            onConfirm={handleClearAllData}
+          />
+        </div>
+      </SectionCard>
     </div>
   )
 }
@@ -684,31 +797,32 @@ function AIBackendSettings() {
     setUrl(preset)
   }
 
-  const statusDot = status === 'connected'
+  const statusColor = status === 'connected'
     ? 'bg-green-500'
     : status === 'checking'
       ? 'bg-yellow-400 animate-pulse'
-      : 'bg-red-400'
+      : 'bg-[var(--color-text-muted)]'
 
   const statusText = status === 'connected'
     ? 'Connected'
     : status === 'checking'
       ? 'Checking...'
-      : getHubUrl() ? 'Not connected' : 'AI disabled'
+      : getHubUrl() ? 'Not connected' : 'Not configured'
 
   return (
-    <section className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-5">
-      <h3 className="text-sm font-semibold text-[var(--color-text-primary)] mb-4">
-        AI Backend
-      </h3>
-
+    <SectionCard title="AI Backend">
       <div className="space-y-4">
         {/* Status indicator */}
         <div className="flex items-center gap-2">
-          <span className={`inline-block w-2.5 h-2.5 rounded-full ${statusDot}`} />
+          <span className={`inline-block w-2.5 h-2.5 rounded-full ${statusColor}`} />
           <span className="text-sm font-medium text-[var(--color-text-primary)]">
             {statusText}
           </span>
+          {status === 'disconnected' && !getHubUrl() && (
+            <span className="text-xs text-[var(--color-text-muted)] ml-1">
+              -- Lingua works fully offline without AI
+            </span>
+          )}
         </div>
 
         {/* URL input */}
@@ -721,7 +835,7 @@ function AIBackendSettings() {
               type="url"
               value={url}
               onChange={e => setUrl(e.target.value)}
-              placeholder="https://your-server.example.com or http://localhost:8420"
+              placeholder="http://localhost:8420"
               className="flex-1 px-3 py-2 rounded-lg border border-[var(--color-border)]
                 bg-[var(--color-bg)] text-[var(--color-text-primary)] text-sm
                 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-main)]
@@ -747,21 +861,23 @@ function AIBackendSettings() {
           </label>
           <div className="flex flex-wrap gap-2">
             <button
-              onClick={() => handlePreset(import.meta.env.VITE_HUB_URL || '')}
-              className="px-3 py-1.5 rounded-lg text-xs font-medium cursor-pointer
-                border border-[var(--color-border)] text-[var(--color-text-secondary)]
-                bg-[var(--color-bg)] hover:bg-[var(--color-surface-alt)] transition-colors"
-            >
-              Use Lingua Cloud
-            </button>
-            <button
               onClick={() => handlePreset('http://localhost:8420')}
               className="px-3 py-1.5 rounded-lg text-xs font-medium cursor-pointer
                 border border-[var(--color-border)] text-[var(--color-text-secondary)]
                 bg-[var(--color-bg)] hover:bg-[var(--color-surface-alt)] transition-colors"
             >
-              Use Local (localhost:8420)
+              Local (localhost:8420)
             </button>
+            {import.meta.env.VITE_HUB_URL && (
+              <button
+                onClick={() => handlePreset(import.meta.env.VITE_HUB_URL)}
+                className="px-3 py-1.5 rounded-lg text-xs font-medium cursor-pointer
+                  border border-[var(--color-border)] text-[var(--color-text-secondary)]
+                  bg-[var(--color-bg)] hover:bg-[var(--color-surface-alt)] transition-colors"
+              >
+                Lingua Cloud
+              </button>
+            )}
             <button
               onClick={() => handlePreset('')}
               className="px-3 py-1.5 rounded-lg text-xs font-medium cursor-pointer
@@ -774,11 +890,11 @@ function AIBackendSettings() {
         </div>
 
         {/* Help text */}
-        <div className="text-xs text-[var(--color-text-muted)] space-y-1">
-          <p><strong>Lingua Cloud</strong> — connects to the hosted AI server (requires internet). Best for most users.</p>
-          <p><strong>Local</strong> — for developers running the Creative Hub backend on their own machine.</p>
-          <p><strong>Disable AI</strong> — the app works fully offline with flashcards, quizzes, and browser TTS. AI chat, story generation, and grammar lessons won't be available.</p>
-        </div>
+        <p className="text-xs text-[var(--color-text-muted)] leading-relaxed">
+          Flashcards, quizzes, word bank, and browser TTS always work without AI.
+          Connect a backend to unlock AI chat, story generation, grammar lessons,
+          and high-quality text-to-speech.
+        </p>
 
         {/* Save */}
         <button
@@ -789,6 +905,6 @@ function AIBackendSettings() {
           Save
         </button>
       </div>
-    </section>
+    </SectionCard>
   )
 }

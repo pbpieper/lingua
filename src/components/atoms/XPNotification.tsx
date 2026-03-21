@@ -17,6 +17,8 @@ const SOURCE_LABELS: Record<XPSource, string> = {
   writing_practice: 'Writing Practice',
   speaking_practice: 'Speaking Practice',
   reading_story: 'Reading',
+  quick_practice: 'Quick Practice',
+  milestone_bonus: 'Milestone',
 }
 
 interface Toast {

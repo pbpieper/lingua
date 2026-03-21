@@ -54,10 +54,12 @@ function saveSessionFeedback(dateKey: string, feedback: SessionFeedback): void {
 
 function Chip({
   label,
+  icon,
   selected,
   onClick,
 }: {
   label: string
+  icon?: string
   selected: boolean
   onClick: () => void
 }) {
@@ -65,13 +67,13 @@ function Chip({
     <button
       type="button"
       onClick={onClick}
-      className="px-4 py-2 rounded-full text-sm font-medium cursor-pointer transition-all border"
-      style={{
-        background: selected ? 'var(--color-primary-main)' : 'var(--color-surface)',
-        color: selected ? '#fff' : 'var(--color-text-secondary)',
-        borderColor: selected ? 'var(--color-primary-main)' : 'var(--color-border)',
-      }}
+      className={`flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-sm font-medium cursor-pointer transition-all border
+        ${selected
+          ? 'border-[var(--color-primary-main)] bg-[var(--color-primary-main)] text-white shadow-sm scale-[1.02]'
+          : 'border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text-secondary)] hover:border-[var(--color-primary-light)] hover:bg-[var(--color-primary-pale)]'
+        }`}
     >
+      {icon && <span className="text-sm">{icon}</span>}
       {label}
     </button>
   )
@@ -94,21 +96,21 @@ function ToolChip({
 }) {
   return (
     <div
-      className="flex items-center gap-2 px-3 py-2 rounded-lg border"
+      className="flex items-center gap-2 px-3 py-2 rounded-xl border transition-colors"
       style={{
-        background: 'var(--color-surface)',
-        borderColor: 'var(--color-border)',
+        background: rating !== undefined ? 'var(--color-primary-faded)' : 'var(--color-surface)',
+        borderColor: rating !== undefined ? 'var(--color-primary-light)' : 'var(--color-border)',
       }}
     >
       <span className="text-base">{icon}</span>
-      <span className="text-xs font-medium flex-1" style={{ color: 'var(--color-text-primary)' }}>
+      <span className="text-xs font-semibold flex-1" style={{ color: 'var(--color-text-primary)' }}>
         {label}
       </span>
       <button
         type="button"
         onClick={() => onRate(true)}
-        className="text-base cursor-pointer bg-transparent border-none p-0.5 transition-transform hover:scale-110"
-        style={{ opacity: rating === true ? 1 : 0.35 }}
+        className={`text-base cursor-pointer bg-transparent border-none p-1 rounded-md transition-all hover:scale-110
+          ${rating === true ? 'opacity-100 bg-green-100 dark:bg-green-900/30' : 'opacity-30 hover:opacity-60'}`}
         aria-label={`Thumbs up for ${label}`}
       >
         &#128077;
@@ -116,8 +118,8 @@ function ToolChip({
       <button
         type="button"
         onClick={() => onRate(false)}
-        className="text-base cursor-pointer bg-transparent border-none p-0.5 transition-transform hover:scale-110"
-        style={{ opacity: rating === false ? 1 : 0.35 }}
+        className={`text-base cursor-pointer bg-transparent border-none p-1 rounded-md transition-all hover:scale-110
+          ${rating === false ? 'opacity-100 bg-red-100 dark:bg-red-900/30' : 'opacity-30 hover:opacity-60'}`}
         aria-label={`Thumbs down for ${label}`}
       >
         &#128078;
@@ -230,6 +232,11 @@ export function EveningReview({
   // Check if feedback was already saved today
   const [alreadySaved] = useState(() => loadSessionFeedback(today) !== null)
 
+  // Step management for progressive disclosure
+  const [step, setStep] = useState<'celebrate' | 'feedback' | 'tomorrow' | 'done'>(
+    alreadySaved ? 'done' : 'celebrate'
+  )
+
   // Feedback state
   const [newWordsFeeling, setNewWordsFeeling] = useState<NewWordsFeeling | null>(null)
   const [difficulty, setDifficulty] = useState<Difficulty | null>(null)
@@ -247,11 +254,19 @@ export function EveningReview({
     chatScrollRef.current?.scrollTo({ top: chatScrollRef.current.scrollHeight, behavior: 'smooth' })
   }, [chatMessages])
 
+  // Auto-advance from celebration after 2.5s
+  useEffect(() => {
+    if (step === 'celebrate') {
+      const timer = setTimeout(() => setStep('feedback'), 2500)
+      return () => clearTimeout(timer)
+    }
+  }, [step])
+
   const handleToolRate = useCallback((toolId: string, up: boolean) => {
     setToolFeedback(prev => ({ ...prev, [toolId]: up }))
   }, [])
 
-  const handleSave = useCallback(() => {
+  const handleSaveFeedback = useCallback(() => {
     const feedback: SessionFeedback = {
       newWordsFeeling,
       difficulty,
@@ -285,7 +300,8 @@ export function EveningReview({
     }
 
     setSaved(true)
-    toast.success('Feedback saved! See you tomorrow.')
+    setStep('tomorrow')
+    toast.success('Feedback saved!')
   }, [newWordsFeeling, difficulty, topicPreference, toolFeedback, today])
 
   const sessionSummary = [
@@ -333,10 +349,16 @@ export function EveningReview({
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5, ease: 'easeOut' }}
-      className="space-y-6"
+      className="space-y-5"
     >
-      {/* Congratulations Section */}
-      <div className="text-center py-6 relative overflow-hidden">
+      {/* === Congratulations Section === */}
+      <div
+        className="text-center py-8 px-4 relative overflow-hidden rounded-2xl"
+        style={{
+          background: 'linear-gradient(135deg, var(--color-primary-pale) 0%, var(--color-surface) 50%, var(--color-accent-faded) 100%)',
+          border: '1px solid var(--color-primary-light)',
+        }}
+      >
         {/* Celebration particles */}
         <motion.div
           initial={{ opacity: 0 }}
@@ -358,116 +380,95 @@ export function EveningReview({
               className="absolute text-xl"
               style={{ left: `${10 + i * 10}%`, top: '40%' }}
             >
-              {['&#11088;', '&#127881;', '&#127942;', '&#128293;', '&#127775;', '&#10024;', '&#128170;', '&#127891;'][i]}
+              {['\u2B50','\u{1F389}','\u{1F3C6}','\u{1F525}','\u{1F31F}','\u2728','\u{1F4AA}','\u{1F393}'][i]}
             </motion.span>
           ))}
         </motion.div>
 
-        <motion.h2
-          initial={{ scale: 0.8 }}
+        <motion.div
+          initial={{ scale: 0 }}
           animate={{ scale: 1 }}
-          transition={{ type: 'spring', stiffness: 200, damping: 15, delay: 0.2 }}
-          className="text-2xl font-bold mb-2"
+          transition={{ type: 'spring', stiffness: 200, damping: 12, delay: 0.1 }}
+          className="text-5xl mb-3"
+        >
+          &#127942;
+        </motion.div>
+
+        <motion.h2
+          initial={{ scale: 0.8, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          transition={{ type: 'spring', stiffness: 200, damping: 15, delay: 0.25 }}
+          className="text-2xl font-extrabold mb-1"
           style={{ color: 'var(--color-primary-main)' }}
         >
           Session Complete!
         </motion.h2>
-        <p className="text-sm" style={{ color: 'var(--color-text-muted)' }}>
+        <motion.p
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.5 }}
+          className="text-sm"
+          style={{ color: 'var(--color-text-secondary)' }}
+        >
           Great work studying {targetName} today
-        </p>
+        </motion.p>
       </div>
 
-      {/* Stats summary */}
+      {/* === Stats Summary === */}
       <div
-        className="rounded-xl p-5"
+        className="rounded-2xl p-5"
         style={{
           background: 'var(--color-surface)',
           border: '1px solid var(--color-border)',
-          boxShadow: '0 2px 12px rgba(0,0,0,0.04)',
         }}
       >
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-center">
-          <div>
-            <div className="text-xl font-bold" style={{ color: 'var(--color-primary-main)' }}>
-              {wordsLearned}
-            </div>
-            <div className="text-xs mt-0.5" style={{ color: 'var(--color-text-muted)' }}>
-              Words learned
-            </div>
-          </div>
-          <div>
-            <div className="text-xl font-bold" style={{ color: 'var(--color-correct)' }}>
-              {Math.round(accuracy)}%
-            </div>
-            <div className="text-xs mt-0.5" style={{ color: 'var(--color-text-muted)' }}>
-              Accuracy
-            </div>
-          </div>
-          <div>
-            <div className="text-xl font-bold" style={{ color: 'var(--color-accent-dark, var(--color-accent))' }}>
-              {streak}
-            </div>
-            <div className="text-xs mt-0.5" style={{ color: 'var(--color-text-muted)' }}>
-              Day streak
-            </div>
-          </div>
-          <div>
-            <div className="text-xl font-bold" style={{ color: 'var(--color-text-primary)' }}>
-              ~{timeSpentMinutes}m
-            </div>
-            <div className="text-xs mt-0.5" style={{ color: 'var(--color-text-muted)' }}>
-              Time spent
-            </div>
-          </div>
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+          <StatPill value={wordsLearned} label="Words learned" color="var(--color-primary-main)" icon="&#128218;" />
+          <StatPill value={`${Math.round(accuracy)}%`} label="Accuracy" color="var(--color-correct)" icon="&#127919;" />
+          <StatPill value={streak} label={`Day streak`} color="var(--color-accent-dark, orange)" icon="&#128293;" />
+          <StatPill value={`~${timeSpentMinutes}m`} label="Time spent" color="var(--color-text-primary)" icon="&#9202;" />
         </div>
       </div>
 
-      {/* Quick Feedback */}
-      {!saved ? (
-        <div
-          className="rounded-xl p-5 space-y-5"
+      {/* === Quick Feedback (step: feedback) === */}
+      {!saved && (step === 'feedback' || step === 'celebrate') && (
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: step === 'feedback' ? 1 : 0.3, y: 0 }}
+          className="rounded-2xl p-5 space-y-5"
           style={{
             background: 'var(--color-surface)',
             border: '1px solid var(--color-border)',
           }}
         >
-          <h3 className="text-base font-semibold" style={{ color: 'var(--color-text-primary)' }}>
-            Quick Feedback
-          </h3>
+          <div>
+            <h3 className="text-base font-bold" style={{ color: 'var(--color-text-primary)' }}>
+              Quick Feedback
+            </h3>
+            <p className="text-xs text-[var(--color-text-muted)] mt-0.5">Help us tune tomorrow&apos;s session</p>
+          </div>
 
           {/* New words */}
           <div>
             <label className="block text-xs font-semibold mb-2" style={{ color: 'var(--color-text-secondary)' }}>
-              New words today:
+              New words today?
             </label>
             <div className="flex flex-wrap gap-2">
-              <Chip label="Too few" selected={newWordsFeeling === 'too-few'} onClick={() => setNewWordsFeeling('too-few')} />
-              <Chip label="Just right" selected={newWordsFeeling === 'just-right'} onClick={() => setNewWordsFeeling('just-right')} />
-              <Chip label="Too many" selected={newWordsFeeling === 'too-many'} onClick={() => setNewWordsFeeling('too-many')} />
+              <Chip icon="&#128200;" label="More please" selected={newWordsFeeling === 'too-few'} onClick={() => setNewWordsFeeling('too-few')} />
+              <Chip icon="&#128077;" label="Just right" selected={newWordsFeeling === 'just-right'} onClick={() => setNewWordsFeeling('just-right')} />
+              <Chip icon="&#128201;" label="Too many" selected={newWordsFeeling === 'too-many'} onClick={() => setNewWordsFeeling('too-many')} />
             </div>
           </div>
 
           {/* Difficulty */}
           <div>
             <label className="block text-xs font-semibold mb-2" style={{ color: 'var(--color-text-secondary)' }}>
-              Difficulty:
+              Difficulty?
             </label>
             <div className="flex flex-wrap gap-2">
-              <Chip label="Too easy" selected={difficulty === 'too-easy'} onClick={() => setDifficulty('too-easy')} />
-              <Chip label="Just right" selected={difficulty === 'just-right'} onClick={() => setDifficulty('just-right')} />
-              <Chip label="Too hard" selected={difficulty === 'too-hard'} onClick={() => setDifficulty('too-hard')} />
-            </div>
-          </div>
-
-          {/* Tomorrow's topic */}
-          <div>
-            <label className="block text-xs font-semibold mb-2" style={{ color: 'var(--color-text-secondary)' }}>
-              Tomorrow's topic:
-            </label>
-            <div className="flex flex-wrap gap-2">
-              <Chip label="Same topic" selected={topicPreference === 'same'} onClick={() => setTopicPreference('same')} />
-              <Chip label="New topic" selected={topicPreference === 'new'} onClick={() => setTopicPreference('new')} />
-              <Chip label="Surprise me" selected={topicPreference === 'surprise'} onClick={() => setTopicPreference('surprise')} />
+              <Chip icon="&#128564;" label="Too easy" selected={difficulty === 'too-easy'} onClick={() => setDifficulty('too-easy')} />
+              <Chip icon="&#128170;" label="Just right" selected={difficulty === 'just-right'} onClick={() => setDifficulty('just-right')} />
+              <Chip icon="&#129327;" label="Too hard" selected={difficulty === 'too-hard'} onClick={() => setDifficulty('too-hard')} />
             </div>
           </div>
 
@@ -475,7 +476,7 @@ export function EveningReview({
           {uniqueTools.length > 0 && (
             <div>
               <label className="block text-xs font-semibold mb-2" style={{ color: 'var(--color-text-secondary)' }}>
-                Preferred tools:
+                Rate today&apos;s tools:
               </label>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                 {uniqueTools.map(toolId => {
@@ -495,34 +496,67 @@ export function EveningReview({
             </div>
           )}
 
+          {/* Tomorrow's topic -- builds anticipation */}
+          <div className="pt-2 border-t border-[var(--color-border)]">
+            <label className="block text-xs font-bold mb-2" style={{ color: 'var(--color-text-primary)' }}>
+              What should tomorrow look like?
+            </label>
+            <div className="flex flex-wrap gap-2">
+              <Chip icon="&#128260;" label="Same topic" selected={topicPreference === 'same'} onClick={() => setTopicPreference('same')} />
+              <Chip icon="&#127793;" label="New topic" selected={topicPreference === 'new'} onClick={() => setTopicPreference('new')} />
+              <Chip icon="&#127922;" label="Surprise me" selected={topicPreference === 'surprise'} onClick={() => setTopicPreference('surprise')} />
+            </div>
+          </div>
+
           {/* Save button */}
           <button
             type="button"
-            onClick={handleSave}
-            className="w-full py-3 rounded-xl text-sm font-semibold cursor-pointer text-white transition-opacity hover:opacity-90"
+            onClick={handleSaveFeedback}
+            className="w-full py-3 rounded-xl text-sm font-bold cursor-pointer text-white transition-all hover:opacity-90 hover:shadow-md border-none"
             style={{ background: 'var(--color-primary-main)' }}
           >
-            Save Feedback
+            Save & Build Tomorrow&apos;s Plan
           </button>
-        </div>
-      ) : (
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          className="rounded-xl p-5 text-center"
-          style={{
-            background: 'var(--color-primary-pale, var(--color-primary-faded))',
-            border: '1px solid var(--color-primary-light)',
-          }}
-        >
-          <p className="text-sm font-medium" style={{ color: 'var(--color-primary-dark, var(--color-primary-main))' }}>
-            &#10003; Feedback saved — tomorrow's session will be adjusted accordingly
-          </p>
         </motion.div>
       )}
 
-      {/* Product Feedback — natural continuation of evening review */}
-      {saved && (
+      {/* === Tomorrow Preview (after saving feedback) === */}
+      {(step === 'tomorrow' || step === 'done') && saved && (
+        <motion.div
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ type: 'spring', stiffness: 200, damping: 20 }}
+          className="rounded-2xl p-5 text-center"
+          style={{
+            background: 'linear-gradient(135deg, var(--color-primary-pale, var(--color-primary-faded)) 0%, var(--color-surface) 100%)',
+            border: '1px solid var(--color-primary-light)',
+          }}
+        >
+          <div className="text-3xl mb-2">&#9989;</div>
+          <p className="text-sm font-bold" style={{ color: 'var(--color-primary-dark, var(--color-primary-main))' }}>
+            Feedback saved
+          </p>
+          <p className="text-xs text-[var(--color-text-muted)] mt-1">
+            Tomorrow&apos;s session will be adjusted based on your preferences.
+            {topicPreference === 'new' && ' We\'ll mix in fresh content.'}
+            {topicPreference === 'same' && ' We\'ll keep the same focus area.'}
+            {topicPreference === 'surprise' && ' We\'ll keep things exciting!'}
+          </p>
+          {newWordsFeeling === 'too-many' && (
+            <p className="text-xs text-[var(--color-accent-dark)] mt-2 font-medium">
+              New words reduced by 5 per day.
+            </p>
+          )}
+          {newWordsFeeling === 'too-few' && (
+            <p className="text-xs text-[var(--color-correct)] mt-2 font-medium">
+              New words increased by 5 per day.
+            </p>
+          )}
+        </motion.div>
+      )}
+
+      {/* === Product Feedback -- natural continuation === */}
+      {saved && step === 'done' && (
         <FeedbackCollector
           embedded
           heading="One more thing..."
@@ -530,10 +564,23 @@ export function EveningReview({
         />
       )}
 
-      {/* AI Tutor Chat */}
+      {/* Transition from tomorrow to done */}
+      {step === 'tomorrow' && saved && (
+        <div className="text-center">
+          <button
+            type="button"
+            onClick={() => setStep('done')}
+            className="text-xs text-[var(--color-text-muted)] underline cursor-pointer bg-transparent border-none hover:text-[var(--color-text-secondary)]"
+          >
+            Continue
+          </button>
+        </div>
+      )}
+
+      {/* === AI Tutor Chat === */}
       {hubAvailable && (
         <div
-          className="rounded-xl overflow-hidden"
+          className="rounded-2xl overflow-hidden"
           style={{
             background: 'var(--color-surface)',
             border: '1px solid var(--color-border)',
@@ -543,24 +590,43 @@ export function EveningReview({
             className="px-4 py-3 border-b"
             style={{ borderColor: 'var(--color-border)' }}
           >
-            <h3 className="text-sm font-semibold" style={{ color: 'var(--color-text-primary)' }}>
-              Chat with your tutor
-            </h3>
-            <p className="text-xs" style={{ color: 'var(--color-text-muted)' }}>
-              Ask about your session, get tips, or just chat
-            </p>
+            <div className="flex items-center gap-2">
+              <span className="text-base">&#129302;</span>
+              <div>
+                <h3 className="text-sm font-bold" style={{ color: 'var(--color-text-primary)' }}>
+                  Chat with your tutor
+                </h3>
+                <p className="text-[10px]" style={{ color: 'var(--color-text-muted)' }}>
+                  Ask about your session, get tips, or just chat
+                </p>
+              </div>
+            </div>
           </div>
 
           {/* Messages */}
           <div
             ref={chatScrollRef}
             className="px-4 py-3 space-y-2 overflow-y-auto"
-            style={{ maxHeight: 240, minHeight: 60 }}
+            style={{ maxHeight: 260, minHeight: 60 }}
           >
             {chatMessages.length === 0 && !chatSending && (
-              <p className="text-xs text-center py-4" style={{ color: 'var(--color-text-muted)' }}>
-                Optional: ask your AI tutor anything about today's session
-              </p>
+              <div className="text-center py-6">
+                <p className="text-xs" style={{ color: 'var(--color-text-muted)' }}>
+                  Ask your AI tutor anything about today&apos;s session
+                </p>
+                <div className="flex flex-wrap justify-center gap-1.5 mt-3">
+                  {['How did I do?', 'Tips for tomorrow', 'What should I focus on?'].map(q => (
+                    <button
+                      key={q}
+                      type="button"
+                      onClick={() => { setChatInput(q); }}
+                      className="px-3 py-1.5 rounded-full text-[10px] font-medium border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text-secondary)] cursor-pointer hover:border-[var(--color-primary-light)] hover:bg-[var(--color-primary-pale)] transition-colors"
+                    >
+                      {q}
+                    </button>
+                  ))}
+                </div>
+              </div>
             )}
             {chatMessages.map((msg, i) => (
               <div
@@ -568,19 +634,19 @@ export function EveningReview({
                 className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
               >
                 <div
-                  className="max-w-[80%] rounded-xl px-3 py-2 text-sm"
+                  className="max-w-[80%] rounded-2xl px-3.5 py-2 text-sm leading-relaxed"
                   style={
                     msg.role === 'user'
                       ? {
                           background: 'var(--color-primary-main)',
                           color: '#fff',
-                          borderBottomRightRadius: 4,
+                          borderBottomRightRadius: 6,
                         }
                       : {
                           background: 'var(--color-surface-alt, var(--color-surface))',
                           color: 'var(--color-text-primary)',
                           border: '1px solid var(--color-border)',
-                          borderBottomLeftRadius: 4,
+                          borderBottomLeftRadius: 6,
                         }
                   }
                 >
@@ -591,14 +657,16 @@ export function EveningReview({
             {chatSending && (
               <div className="flex justify-start">
                 <div
-                  className="rounded-xl px-3 py-2 text-sm"
+                  className="rounded-2xl px-3.5 py-2 text-sm flex items-center gap-2"
                   style={{
                     background: 'var(--color-surface-alt, var(--color-surface))',
                     border: '1px solid var(--color-border)',
                     color: 'var(--color-text-muted)',
                   }}
                 >
-                  Thinking...
+                  <span className="inline-block w-1.5 h-1.5 rounded-full bg-[var(--color-text-muted)] animate-pulse" />
+                  <span className="inline-block w-1.5 h-1.5 rounded-full bg-[var(--color-text-muted)] animate-pulse [animation-delay:0.2s]" />
+                  <span className="inline-block w-1.5 h-1.5 rounded-full bg-[var(--color-text-muted)] animate-pulse [animation-delay:0.4s]" />
                 </div>
               </div>
             )}
@@ -614,9 +682,9 @@ export function EveningReview({
               value={chatInput}
               onChange={e => setChatInput(e.target.value)}
               onKeyDown={handleChatKeyDown}
-              placeholder="Chat with your tutor about today's session..."
+              placeholder="Ask your tutor..."
               disabled={chatSending}
-              className="flex-1 px-3 py-2 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-main)] disabled:opacity-50"
+              className="flex-1 px-3.5 py-2 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-main)] disabled:opacity-50"
               style={{
                 background: 'var(--color-bg, var(--color-surface-alt))',
                 border: '1px solid var(--color-border)',
@@ -627,7 +695,7 @@ export function EveningReview({
               type="button"
               onClick={handleChatSend}
               disabled={chatSending || !chatInput.trim()}
-              className="px-4 py-2 rounded-lg text-sm font-medium cursor-pointer text-white transition-opacity hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed"
+              className="px-4 py-2 rounded-xl text-sm font-bold cursor-pointer text-white transition-all hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed border-none"
               style={{ background: 'var(--color-primary-main)' }}
             >
               Send
@@ -636,5 +704,23 @@ export function EveningReview({
         </div>
       )}
     </motion.div>
+  )
+}
+
+/* ------------------------------------------------------------------ */
+/*  Stat pill sub-component                                            */
+/* ------------------------------------------------------------------ */
+
+function StatPill({ value, label, color, icon }: { value: string | number; label: string; color: string; icon: string }) {
+  return (
+    <div className="text-center">
+      <div className="text-xs mb-1" dangerouslySetInnerHTML={{ __html: icon }} />
+      <div className="text-xl font-extrabold leading-tight" style={{ color }}>
+        {value}
+      </div>
+      <div className="text-[10px] mt-0.5" style={{ color: 'var(--color-text-muted)' }}>
+        {label}
+      </div>
+    </div>
   )
 }

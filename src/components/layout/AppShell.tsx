@@ -16,6 +16,8 @@ const FlashcardDeck = lazy(() => import('@/components/flashcards/FlashcardDeck')
 const MatchGame = lazy(() => import('@/components/games/MatchGame').then(m => ({ default: m.MatchGame })))
 const FillBlank = lazy(() => import('@/components/games/FillBlank').then(m => ({ default: m.FillBlank })))
 const MultipleChoice = lazy(() => import('@/components/games/MultipleChoice').then(m => ({ default: m.MultipleChoice })))
+const SpeedTyping = lazy(() => import('@/components/games/SpeedTyping').then(m => ({ default: m.SpeedTyping })))
+const WordAssociation = lazy(() => import('@/components/games/WordAssociation').then(m => ({ default: m.WordAssociation })))
 const SpeakingPractice = lazy(() => import('@/components/speaking/SpeakingPractice').then(m => ({ default: m.SpeakingPractice })))
 const ReadingAssist = lazy(() => import('@/components/reading/ReadingAssist').then(m => ({ default: m.ReadingAssist })))
 const PreLearnPipeline = lazy(() => import('@/components/prelearn/PreLearnPipeline').then(m => ({ default: m.PreLearnPipeline })))
@@ -36,7 +38,7 @@ const MediaLibrary = lazy(() => import('@/components/media/MediaLibrary').then(m
 import { TOOLS } from '@/types/tools'
 import type { LinguaToolId } from '@/types/tools'
 
-// Bottom tab bar items for mobile — maps to top-level sections
+// Bottom tab bar items for mobile -- maps to top-level sections
 const MOBILE_TABS: Array<{ id: LinguaToolId; icon: string; label: string }> = [
   { id: 'home', icon: '\u{1F3E0}', label: 'Home' },
   { id: 'flashcards', icon: '\u{1F4AA}', label: 'Practice' },
@@ -54,6 +56,8 @@ function ToolContent({ toolId }: { toolId: LinguaToolId }) {
     case 'match': return <MatchGame />
     case 'fillblank': return <FillBlank />
     case 'multichoice': return <MultipleChoice />
+    case 'speedtyping': return <SpeedTyping />
+    case 'wordassociation': return <WordAssociation />
     case 'speaking': return <SpeakingPractice />
     case 'reading': return <ReadingAssist />
     case 'prelearn': return <PreLearnPipeline />
@@ -72,6 +76,20 @@ function ToolContent({ toolId }: { toolId: LinguaToolId }) {
     case 'feedback-admin': return <FeedbackDashboard />
     default: return <p className="text-[var(--color-text-muted)]">Select a tool</p>
   }
+}
+
+/** Loading spinner for Suspense */
+function LoadingFallback() {
+  return (
+    <div className="flex items-center justify-center py-16">
+      <div className="flex flex-col items-center gap-3">
+        <div
+          className="w-8 h-8 rounded-full border-2 border-[var(--color-border)] border-t-[var(--color-primary-main)] animate-spin"
+        />
+        <span className="text-xs text-[var(--color-text-muted)]">Loading...</span>
+      </div>
+    </div>
+  )
 }
 
 export function AppShell() {
@@ -104,7 +122,7 @@ export function AppShell() {
       {/* Backdrop overlay for mobile */}
       {sidebarOpen && (
         <div
-          className="fixed inset-0 z-30 bg-black/50 md:hidden"
+          className="fixed inset-0 z-30 bg-black/50 md:hidden backdrop-blur-sm"
           onClick={() => setSidebarOpen(false)}
         />
       )}
@@ -112,7 +130,7 @@ export function AppShell() {
       {/* Sidebar wrapper with responsive behavior */}
       <div
         className={`
-          fixed inset-y-0 left-0 z-40 w-[200px] transform transition-transform duration-200 ease-in-out
+          fixed inset-y-0 left-0 z-40 w-[220px] transform transition-transform duration-200 ease-in-out
           md:relative md:translate-x-0
           ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}
         `}
@@ -122,12 +140,13 @@ export function AppShell() {
 
       <div className="flex-1 min-w-0 flex flex-col">
         {/* Mobile header bar */}
-        <div className="flex items-center justify-between px-4 py-3 border-b border-[var(--color-border)] bg-[var(--color-surface)] md:hidden">
+        <div className="flex items-center justify-between px-4 py-2.5 border-b border-[var(--color-border)] bg-[var(--color-surface)] md:hidden">
           <button
             onClick={() => setSidebarOpen(!sidebarOpen)}
             className="p-2 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] cursor-pointer text-[var(--color-text-secondary)]"
+            aria-label="Toggle sidebar"
           >
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
               <path d="M3 6h18M3 12h18M3 18h18" />
             </svg>
           </button>
@@ -135,10 +154,21 @@ export function AppShell() {
             {activeToolDef && <span>{activeToolDef.icon}</span>}
             {activeToolDef && <span>{activeToolDef.label}</span>}
           </div>
-          <button onClick={toggle}
-            className="px-3 py-1.5 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] text-xs cursor-pointer text-[var(--color-text-secondary)]">
-            {isDark ? '☀️' : '🌙'}
-          </button>
+          <div className="flex items-center gap-1.5">
+            <button
+              onClick={() => setCommandPaletteOpen(true)}
+              className="p-2 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] cursor-pointer text-[var(--color-text-muted)]"
+              aria-label="Search"
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+            </button>
+            <button onClick={toggle}
+              className="p-2 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] cursor-pointer text-[var(--color-text-secondary)]"
+              aria-label="Toggle theme"
+            >
+              {isDark ? '\u2600\uFE0F' : '\u{1F319}'}
+            </button>
+          </div>
         </div>
 
         <main className="flex-1 overflow-y-auto pb-16 md:pb-0">
@@ -147,39 +177,32 @@ export function AppShell() {
             <div className="hidden md:flex justify-between items-center mb-5">
               <div className="flex items-center gap-3">
                 {!hubAvailable && (
-                  <span className="px-2 py-1 rounded-md text-xs font-bold bg-red-50 text-red-600 border border-red-200">
-                    Backend offline
+                  <span className="px-2.5 py-1 rounded-md text-xs font-medium bg-[var(--color-surface-alt)] text-[var(--color-text-muted)] border border-[var(--color-border)]">
+                    Offline mode
                   </span>
                 )}
               </div>
               <div className="flex items-center gap-2">
                 <button
                   onClick={() => setCommandPaletteOpen(true)}
-                  className="px-3 py-1.5 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] text-xs cursor-pointer text-[var(--color-text-muted)] flex items-center gap-1.5"
+                  className="px-3 py-1.5 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] text-xs cursor-pointer text-[var(--color-text-muted)] flex items-center gap-2 hover:border-[var(--color-primary-light)] transition-colors"
                 >
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
                   <span>Search</span>
-                  <kbd className="ml-1 px-1 py-0.5 rounded text-[10px] font-mono bg-[var(--color-surface-alt)] border border-[var(--color-border)]">⌘K</kbd>
+                  <kbd className="ml-1 px-1.5 py-0.5 rounded text-[10px] font-mono bg-[var(--color-surface-alt)] border border-[var(--color-border)]">{navigator.platform?.includes('Mac') ? '\u2318' : 'Ctrl'}K</kbd>
                 </button>
                 <button onClick={toggle}
-                  className="px-3 py-1.5 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] text-xs cursor-pointer text-[var(--color-text-secondary)]">
-                  {isDark ? '☀️ Light' : '🌙 Dark'}
+                  className="px-3 py-1.5 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] text-xs cursor-pointer text-[var(--color-text-secondary)] hover:border-[var(--color-primary-light)] transition-colors">
+                  {isDark ? '\u2600\uFE0F Light' : '\u{1F319} Dark'}
                 </button>
               </div>
             </div>
 
-            {/* Mobile-only backend status */}
-            {!hubAvailable && (
-              <div className="mb-3 md:hidden">
-                <span className="px-2 py-1 rounded-md text-xs font-bold bg-red-50 text-red-600 border border-red-200">
-                  Backend offline
-                </span>
-              </div>
-            )}
+            {/* Mobile-only status — hidden to reduce noise for casual users */}
 
             <ActiveStudyBanner />
 
-            <Suspense fallback={<div className="text-center py-8 text-sm text-[var(--color-text-muted)]">Loading...</div>}>
+            <Suspense fallback={<LoadingFallback />}>
               <ToolContent toolId={activeTool} />
             </Suspense>
           </div>
@@ -187,22 +210,24 @@ export function AppShell() {
       </div>
 
       {/* Mobile bottom tab bar */}
-      <nav className="fixed bottom-0 left-0 right-0 z-30 md:hidden border-t border-[var(--color-border)] bg-[var(--color-surface)]">
-        <div className="flex items-center justify-around py-1.5">
+      <nav className="fixed bottom-0 left-0 right-0 z-30 md:hidden border-t border-[var(--color-border)] bg-[var(--color-surface)] safe-area-pb">
+        <div className="flex items-center justify-around py-1.5 px-2">
           {MOBILE_TABS.map(tab => {
             const active = activeTool === tab.id
             return (
               <button
                 key={tab.id}
                 onClick={() => setTool(tab.id)}
-                className={`flex flex-col items-center gap-0.5 px-2 py-1 rounded-lg cursor-pointer transition-colors border-none bg-transparent ${
-                  active ? 'text-[var(--color-primary-main)]' : 'text-[var(--color-text-muted)]'
-                }`}
+                className={`relative flex flex-col items-center gap-0.5 px-3 py-1 rounded-lg cursor-pointer transition-all border-none bg-transparent
+                  ${active
+                    ? 'text-[var(--color-primary-main)]'
+                    : 'text-[var(--color-text-muted)] active:scale-95'
+                  }`}
               >
-                <span className="text-lg">{tab.icon}</span>
-                <span className="text-[10px] font-medium">{tab.label}</span>
+                <span className={`text-lg transition-transform ${active ? 'scale-110' : ''}`}>{tab.icon}</span>
+                <span className={`text-[10px] font-medium ${active ? 'font-bold' : ''}`}>{tab.label}</span>
                 {tab.id === 'flashcards' && wordsDue > 0 && (
-                  <span className="absolute -top-0.5 right-0 w-2 h-2 rounded-full bg-[var(--color-accent-main)]" />
+                  <span className="absolute top-0 right-1 w-2 h-2 rounded-full bg-orange-500" />
                 )}
               </button>
             )

@@ -18,7 +18,8 @@ const LANG_TO_BCP47: Record<string, string> = {
 
 // ── Types ──
 
-type Mode = 'word' | 'translation'
+type Mode = 'word' | 'translation' | 'dictation'
+type DictationSpeed = 'slow' | 'normal' | 'fast'
 type Phase = 'setup' | 'exercise' | 'results'
 type TtsEngine = 'hub' | 'browser' | 'none'
 
@@ -26,6 +27,38 @@ interface ExerciseWord {
   word: Word
   userAnswer: string
   correct: boolean | null
+  /** For dictation mode: per-word scoring */
+  wordScores?: { word: string; correct: boolean }[]
+}
+
+/** Score a dictation answer word-by-word against the expected sentence */
+function scoreDictation(userAnswer: string, expected: string): { wordScores: { word: string; correct: boolean }[]; accuracy: number } {
+  const expectedWords = expected.trim().split(/\s+/)
+  const userWords = userAnswer.trim().split(/\s+/)
+  const wordScores = expectedWords.map((ew, i) => {
+    const uw = userWords[i] ?? ''
+    return {
+      word: ew,
+      correct: normalizeForComparison(uw) === normalizeForComparison(ew),
+    }
+  })
+  const correctCount = wordScores.filter(w => w.correct).length
+  return { wordScores, accuracy: expectedWords.length > 0 ? correctCount / expectedWords.length : 0 }
+}
+
+function speakWithBrowserAtRate(text: string, lang: string, rate: number): Promise<void> {
+  return new Promise((resolve, reject) => {
+    if (!window.speechSynthesis) {
+      reject(new Error('SpeechSynthesis not supported'))
+      return
+    }
+    const utterance = new SpeechSynthesisUtterance(text)
+    utterance.lang = LANG_TO_BCP47[lang] ?? lang
+    utterance.rate = rate
+    utterance.onend = () => resolve()
+    utterance.onerror = (e) => reject(e)
+    speechSynthesis.speak(utterance)
+  })
 }
 
 // ── Helpers ──
@@ -49,7 +82,8 @@ async function pollJobUntilDone(jobId: number, maxAttempts = 30): Promise<string
   return null
 }
 
-function speakWithBrowser(text: string, lang: string): Promise<void> {
+/** Speak without rate control (kept for fallback) */
+export function speakWithBrowser(text: string, lang: string): Promise<void> {
   return new Promise((resolve, reject) => {
     if (!window.speechSynthesis) {
       reject(new Error('SpeechSynthesis not supported'))
@@ -73,6 +107,7 @@ export function ListeningPractice() {
   const [selectedListId, setSelectedListId] = useState<number | null>(null)
   const [mode, setMode] = useState<Mode>('word')
   const [wordCount, setWordCount] = useState(10)
+  const [dictationSpeed, setDictationSpeed] = useState<DictationSpeed>('normal')
 
   // Exercise state
   const [exerciseWords, setExerciseWords] = useState<ExerciseWord[]>([])
@@ -89,7 +124,18 @@ export function ListeningPractice() {
 
   // What text to speak and what the correct answer is
   const getExerciseData = useCallback((ew: ExerciseWord) => {
-    if (mode === 'word') {
+    if (mode === 'dictation') {
+      // Dictation mode: speak the example sentence, user types the full sentence
+      const sentence = ew.word.example_sentence || ew.word.lemma
+      return {
+        speakText: sentence,
+        speakLang: ew.word.language_from,
+        correctAnswer: sentence,
+        answerLang: ew.word.language_from,
+        hintLabel: 'Translation',
+        hintText: ew.word.example_translation || ew.word.translation,
+      }
+    } else if (mode === 'word') {
       // Speak the lemma (in language_from), user types the lemma
       return {
         speakText: ew.word.lemma,
@@ -114,12 +160,16 @@ export function ListeningPractice() {
 
   // ── TTS playback ──
 
+  const speedRateMap: Record<DictationSpeed, number> = { slow: 0.6, normal: 1.0, fast: 1.4 }
+
   const playAudio = useCallback(async (text: string, lang: string) => {
     if (speaking) return
     setSpeaking(true)
 
-    // Try Hub TTS first
-    if (hubAvailable) {
+    const rate = mode === 'dictation' ? speedRateMap[dictationSpeed] : 1.0
+
+    // Try Hub TTS first (non-dictation or normal speed)
+    if (hubAvailable && rate === 1.0) {
       try {
         const { job_id } = await api.generateSpeech(text)
         const url = await pollJobUntilDone(job_id)
@@ -140,16 +190,16 @@ export function ListeningPractice() {
       }
     }
 
-    // Fallback to browser SpeechSynthesis
+    // Fallback to browser SpeechSynthesis (supports rate control)
     try {
       setTtsEngine('browser')
-      await speakWithBrowser(text, lang)
+      await speakWithBrowserAtRate(text, lang, rate)
     } catch {
       setTtsEngine('none')
       toast.error('No TTS available')
     }
     setSpeaking(false)
-  }, [speaking, hubAvailable])
+  }, [speaking, hubAvailable, mode, dictationSpeed])
 
   // ── Start exercise ──
 
@@ -199,7 +249,17 @@ export function ListeningPractice() {
   const checkAnswer = useCallback(() => {
     if (!exerciseWords[currentIndex]) return
     const data = getExerciseData(exerciseWords[currentIndex])
-    const isCorrect = normalizeForComparison(userInput) === normalizeForComparison(data.correctAnswer)
+
+    let isCorrect: boolean
+    let wordScores: { word: string; correct: boolean }[] | undefined
+
+    if (mode === 'dictation') {
+      const result = scoreDictation(userInput, data.correctAnswer)
+      wordScores = result.wordScores
+      isCorrect = result.accuracy >= 0.7 // 70% word accuracy = pass
+    } else {
+      isCorrect = normalizeForComparison(userInput) === normalizeForComparison(data.correctAnswer)
+    }
 
     setExerciseWords(prev => {
       const updated = [...prev]
@@ -207,6 +267,7 @@ export function ListeningPractice() {
         ...updated[currentIndex],
         userAnswer: userInput.trim(),
         correct: isCorrect,
+        wordScores,
       }
       return updated
     })
@@ -218,7 +279,7 @@ export function ListeningPractice() {
       quality: isCorrect ? 4 : 1,
       user_id: userId,
     }).catch(() => {})
-  }, [currentIndex, exerciseWords, getExerciseData, userInput, userId])
+  }, [currentIndex, exerciseWords, getExerciseData, userInput, userId, mode])
 
   // ── Next word / finish ──
 
@@ -330,35 +391,54 @@ export function ListeningPractice() {
               Mode
             </label>
             <div className="flex gap-2">
-              <button
-                onClick={() => setMode('word')}
-                className="flex-1 px-4 py-2.5 rounded-lg text-sm font-medium cursor-pointer transition-colors"
-                style={{
-                  background: mode === 'word' ? 'var(--color-primary-main)' : 'var(--color-surface-alt)',
-                  color: mode === 'word' ? 'white' : 'var(--color-text-secondary)',
-                  border: `1px solid ${mode === 'word' ? 'var(--color-primary-main)' : 'var(--color-border)'}`,
-                }}
-              >
-                Word Dictation
-              </button>
-              <button
-                onClick={() => setMode('translation')}
-                className="flex-1 px-4 py-2.5 rounded-lg text-sm font-medium cursor-pointer transition-colors"
-                style={{
-                  background: mode === 'translation' ? 'var(--color-primary-main)' : 'var(--color-surface-alt)',
-                  color: mode === 'translation' ? 'white' : 'var(--color-text-secondary)',
-                  border: `1px solid ${mode === 'translation' ? 'var(--color-primary-main)' : 'var(--color-border)'}`,
-                }}
-              >
-                Translation Dictation
-              </button>
+              {(['word', 'translation', 'dictation'] as Mode[]).map(m => (
+                <button
+                  key={m}
+                  onClick={() => setMode(m)}
+                  className="flex-1 px-4 py-2.5 rounded-lg text-sm font-medium cursor-pointer transition-colors"
+                  style={{
+                    background: mode === m ? 'var(--color-primary-main)' : 'var(--color-surface-alt)',
+                    color: mode === m ? 'white' : 'var(--color-text-secondary)',
+                    border: `1px solid ${mode === m ? 'var(--color-primary-main)' : 'var(--color-border)'}`,
+                  }}
+                >
+                  {m === 'word' ? 'Word' : m === 'translation' ? 'Translation' : 'Sentence'}
+                </button>
+              ))}
             </div>
             <span className="text-xs" style={{ color: 'var(--color-text-muted)' }}>
               {mode === 'word'
                 ? 'Hear a word spoken aloud, type what you hear.'
-                : 'Hear the translation, type the target language word.'}
+                : mode === 'translation'
+                  ? 'Hear the translation, type the target language word.'
+                  : 'Hear a full sentence, type the entire sentence. Scored word-by-word.'}
             </span>
           </div>
+
+          {/* Dictation speed (only in dictation mode) */}
+          {mode === 'dictation' && (
+            <div className="flex flex-col gap-2">
+              <label className="text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--color-text-muted)' }}>
+                Speed
+              </label>
+              <div className="flex gap-2">
+                {(['slow', 'normal', 'fast'] as DictationSpeed[]).map(s => (
+                  <button
+                    key={s}
+                    onClick={() => setDictationSpeed(s)}
+                    className="flex-1 px-4 py-2 rounded-lg text-sm font-medium cursor-pointer transition-colors capitalize"
+                    style={{
+                      background: dictationSpeed === s ? 'var(--color-primary-main)' : 'var(--color-surface-alt)',
+                      color: dictationSpeed === s ? 'white' : 'var(--color-text-secondary)',
+                      border: `1px solid ${dictationSpeed === s ? 'var(--color-primary-main)' : 'var(--color-border)'}`,
+                    }}
+                  >
+                    {s}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* Word count */}
           <div className="flex flex-col gap-2">
@@ -497,7 +577,9 @@ export function ListeningPractice() {
             <span className="text-xs" style={{ color: 'var(--color-text-muted)' }}>
               {mode === 'word'
                 ? 'Type the word you hear'
-                : 'Type the target language word for what you hear'}
+                : mode === 'translation'
+                  ? 'Type the target language word for what you hear'
+                  : 'Type the full sentence you hear'}
             </span>
 
             {/* Input */}
@@ -538,19 +620,42 @@ export function ListeningPractice() {
                   <div className="flex items-center gap-2">
                     {current.correct ? (
                       <span className="text-sm font-semibold" style={{ color: 'var(--color-correct)' }}>
-                        Correct!
+                        {mode === 'dictation' ? 'Good enough!' : 'Correct!'}
                       </span>
                     ) : (
                       <div className="flex flex-col items-center gap-1">
                         <span className="text-sm font-semibold" style={{ color: 'var(--color-incorrect)' }}>
-                          Incorrect
+                          {mode === 'dictation' ? 'Needs work' : 'Incorrect'}
                         </span>
-                        <span className="text-sm" style={{ color: 'var(--color-text-secondary)' }}>
-                          Correct answer: <strong style={{ color: 'var(--color-correct)' }} dir={isRTL(data.answerLang) ? 'rtl' : undefined}>{data.correctAnswer}</strong>
-                        </span>
+                        {mode !== 'dictation' && (
+                          <span className="text-sm" style={{ color: 'var(--color-text-secondary)' }}>
+                            Correct answer: <strong style={{ color: 'var(--color-correct)' }} dir={isRTL(data.answerLang) ? 'rtl' : undefined}>{data.correctAnswer}</strong>
+                          </span>
+                        )}
                       </div>
                     )}
                   </div>
+
+                  {/* Dictation word-by-word scoring */}
+                  {mode === 'dictation' && current.wordScores && (
+                    <div className="flex flex-wrap gap-1 justify-center max-w-md">
+                      {current.wordScores.map((ws, i) => (
+                        <span
+                          key={i}
+                          className="px-1.5 py-0.5 rounded text-sm font-medium"
+                          style={{
+                            background: ws.correct ? 'rgba(5,150,105,0.12)' : 'rgba(239,68,68,0.12)',
+                            color: ws.correct ? 'var(--color-correct)' : 'var(--color-incorrect)',
+                            textDecoration: ws.correct ? 'none' : 'underline',
+                          }}
+                          dir={isRTL(data.answerLang) ? 'rtl' : undefined}
+                        >
+                          {ws.word}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+
                   <button
                     onClick={nextWord}
                     className="px-6 py-2.5 rounded-xl text-sm font-semibold text-white cursor-pointer"
