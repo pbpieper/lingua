@@ -1,5 +1,6 @@
 import { useState, useCallback } from 'react'
 import { ThemeProvider } from '@/design/theme'
+import { AuthProvider } from '@/context/AuthContext'
 import { AppProvider, useApp } from '@/context/AppContext'
 import { AppShell } from '@/components/layout/AppShell'
 import { Onboarding, type OnboardingData } from '@/components/onboarding/Onboarding'
@@ -112,11 +113,13 @@ function AppContent() {
 export default function App() {
   return (
     <ThemeProvider>
-      <AppProvider>
-        <AppContent />
-        <XPNotificationHost />
-        <Toaster position="bottom-right" />
-      </AppProvider>
+      <AuthProvider>
+        <AppProvider>
+          <AppContent />
+          <XPNotificationHost />
+          <Toaster position="bottom-right" />
+        </AppProvider>
+      </AuthProvider>
     </ThemeProvider>
   )
 }

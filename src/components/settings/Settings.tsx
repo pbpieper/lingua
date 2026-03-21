@@ -1,8 +1,13 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import toast from 'react-hot-toast'
 import { useApp } from '@/context/AppContext'
+import { useAuth } from '@/context/AuthContext'
 import { usePreferences } from '@/hooks/usePreferences'
 import * as api from '@/services/vocabApi'
+import { getHubUrl, setHubUrl } from '@/services/aiConfig'
+import { syncToCloud, syncFromCloud, getSyncStatus, exportUserData } from '@/services/dataSync'
+import { isSupabaseConfigured } from '@/services/supabase'
+import { AuthModal } from '@/components/auth/AuthModal'
 import type { WordInput } from '@/types/word'
 
 interface OnboardingData {
@@ -16,7 +21,13 @@ const DAILY_GOAL_OPTIONS = [5, 10, 15, 20, 30, 50]
 
 export function Settings() {
   const { userId, lists, refreshLists } = useApp()
+  const { user, isAuthenticated, signOut } = useAuth()
   const { prefs, setPref } = usePreferences()
+
+  // Auth modal
+  const [authModalOpen, setAuthModalOpen] = useState(false)
+  const [syncing, setSyncing] = useState(false)
+  const [syncStatus, setSyncStatus] = useState(getSyncStatus)
 
   // Profile
   const [displayName, setDisplayName] = useState(prefs.userName)
@@ -44,6 +55,44 @@ export function Settings() {
       // ignore parse errors
     }
   }, [])
+
+  // Sync handlers
+  const handleSync = async () => {
+    if (!isAuthenticated || !user) return
+    setSyncing(true)
+    try {
+      await syncToCloud(user.id)
+      await syncFromCloud(user.id)
+      setSyncStatus(getSyncStatus())
+      toast.success('Data synced successfully')
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Sync failed')
+    } finally {
+      setSyncing(false)
+    }
+  }
+
+  const handleExportUserData = async () => {
+    try {
+      const data = await exportUserData(userId)
+      const json = JSON.stringify(data, null, 2)
+      const blob = new Blob([json], { type: 'application/json' })
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `lingua-full-export-${new Date().toISOString().slice(0, 10)}.json`
+      a.click()
+      URL.revokeObjectURL(url)
+      toast.success('All data exported')
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Export failed')
+    }
+  }
+
+  const handleSignOut = async () => {
+    await signOut()
+    toast.success('Signed out')
+  }
 
   // Persist profile name
   const handleNameSave = () => {
@@ -180,6 +229,89 @@ export function Settings() {
       <h2 className="text-lg font-semibold text-[var(--color-text-primary)]">
         Settings
       </h2>
+
+      {/* Account Section */}
+      <section className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-5">
+        <h3 className="text-sm font-semibold text-[var(--color-text-primary)] mb-4">
+          Account
+        </h3>
+        {isAuthenticated && user ? (
+          <div className="space-y-4">
+            <div className="flex items-center gap-3">
+              {user.avatarUrl ? (
+                <img src={user.avatarUrl} alt="" className="w-10 h-10 rounded-full object-cover" />
+              ) : (
+                <div className="w-10 h-10 rounded-full bg-[var(--color-primary-main)] flex items-center justify-center text-white font-semibold text-sm">
+                  {(user.displayName || user.email || '?')[0].toUpperCase()}
+                </div>
+              )}
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-semibold text-[var(--color-text-primary)] truncate">
+                  {user.displayName || 'Unnamed user'}
+                </p>
+                {user.email && (
+                  <p className="text-xs text-[var(--color-text-muted)] truncate">{user.email}</p>
+                )}
+              </div>
+            </div>
+
+            {/* Sync status */}
+            {isSupabaseConfigured() && (
+              <div className="text-xs text-[var(--color-text-muted)] space-y-1">
+                <p>Last synced: {syncStatus.lastSyncedAt ? new Date(syncStatus.lastSyncedAt).toLocaleString() : 'Never'}</p>
+              </div>
+            )}
+
+            <div className="flex flex-wrap gap-2">
+              {isSupabaseConfigured() && (
+                <button
+                  onClick={handleSync}
+                  disabled={syncing}
+                  className="px-4 py-2 rounded-lg text-sm font-medium cursor-pointer
+                    bg-[var(--color-primary-main)] text-white hover:opacity-90 transition-opacity
+                    disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {syncing ? 'Syncing...' : 'Sync Data'}
+                </button>
+              )}
+              <button
+                onClick={handleExportUserData}
+                className="px-4 py-2 rounded-lg text-sm font-medium cursor-pointer
+                  border border-[var(--color-border)] text-[var(--color-text-primary)]
+                  bg-[var(--color-bg)] hover:bg-[var(--color-surface-alt)] transition-colors"
+              >
+                Export My Data
+              </button>
+              <button
+                onClick={handleSignOut}
+                className="px-4 py-2 rounded-lg text-sm font-medium cursor-pointer
+                  border border-[var(--color-incorrect)] text-[var(--color-incorrect)]
+                  bg-[var(--color-bg)] hover:bg-red-50 transition-colors"
+              >
+                Sign Out
+              </button>
+            </div>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            <p className="text-sm text-[var(--color-text-secondary)]">
+              Sign in to sync your vocabulary and progress across devices.
+            </p>
+            <button
+              onClick={() => setAuthModalOpen(true)}
+              className="px-5 py-2.5 rounded-lg text-sm font-semibold cursor-pointer
+                bg-[var(--color-primary-main)] text-white hover:opacity-90 transition-opacity"
+            >
+              Sign In / Create Account
+            </button>
+            <p className="text-xs text-[var(--color-text-muted)]">
+              Your data stays on this device until you sign in. No account required to use Lingua.
+            </p>
+          </div>
+        )}
+      </section>
+
+      <AuthModal open={authModalOpen} onClose={() => setAuthModalOpen(false)} />
 
       {/* Profile Section */}
       <section className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-5">
@@ -352,6 +484,9 @@ export function Settings() {
         </div>
       </section>
 
+      {/* AI Backend Section */}
+      <AIBackendSettings />
+
       {/* Data Management Section */}
       <section className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-5">
         <h3 className="text-sm font-semibold text-[var(--color-text-primary)] mb-4">
@@ -481,5 +616,179 @@ export function Settings() {
         </p>
       </section>
     </div>
+  )
+}
+
+// ---------------------------------------------------------------------------
+// AI Backend Settings sub-component
+// ---------------------------------------------------------------------------
+
+function AIBackendSettings() {
+  const [url, setUrl] = useState(getHubUrl())
+  const [status, setStatus] = useState<'checking' | 'connected' | 'disconnected'>('checking')
+  const [testing, setTesting] = useState(false)
+
+  const checkConnection = useCallback(async (targetUrl?: string) => {
+    const checkUrl = targetUrl ?? getHubUrl()
+    if (!checkUrl) {
+      setStatus('disconnected')
+      return
+    }
+    setStatus('checking')
+    try {
+      const healthUrl = `${checkUrl.replace(/\/$/, '')}/health`
+      await fetch(healthUrl, { signal: AbortSignal.timeout(3000) })
+      setStatus('connected')
+    } catch {
+      setStatus('disconnected')
+    }
+  }, [])
+
+  useEffect(() => {
+    checkConnection()
+  }, [checkConnection])
+
+  const handleSave = async () => {
+    const trimmed = url.trim()
+    setHubUrl(trimmed)
+    if (trimmed) {
+      await checkConnection(trimmed)
+      toast.success('AI backend URL saved')
+    } else {
+      setStatus('disconnected')
+      toast.success('AI features disabled')
+    }
+  }
+
+  const handleTestConnection = async () => {
+    const trimmed = url.trim()
+    if (!trimmed) {
+      toast.error('Enter a URL first')
+      return
+    }
+    setTesting(true)
+    try {
+      const healthUrl = `${trimmed.replace(/\/$/, '')}/health`
+      await fetch(healthUrl, { signal: AbortSignal.timeout(5000) })
+      toast.success('Connection successful!')
+      setStatus('connected')
+    } catch {
+      toast.error('Could not reach the server')
+      setStatus('disconnected')
+    } finally {
+      setTesting(false)
+    }
+  }
+
+  const handlePreset = (preset: string) => {
+    setUrl(preset)
+  }
+
+  const statusDot = status === 'connected'
+    ? 'bg-green-500'
+    : status === 'checking'
+      ? 'bg-yellow-400 animate-pulse'
+      : 'bg-red-400'
+
+  const statusText = status === 'connected'
+    ? 'Connected'
+    : status === 'checking'
+      ? 'Checking...'
+      : getHubUrl() ? 'Not connected' : 'AI disabled'
+
+  return (
+    <section className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-5">
+      <h3 className="text-sm font-semibold text-[var(--color-text-primary)] mb-4">
+        AI Backend
+      </h3>
+
+      <div className="space-y-4">
+        {/* Status indicator */}
+        <div className="flex items-center gap-2">
+          <span className={`inline-block w-2.5 h-2.5 rounded-full ${statusDot}`} />
+          <span className="text-sm font-medium text-[var(--color-text-primary)]">
+            {statusText}
+          </span>
+        </div>
+
+        {/* URL input */}
+        <div>
+          <label className="block text-xs font-medium text-[var(--color-text-muted)] mb-1">
+            Server URL
+          </label>
+          <div className="flex gap-2">
+            <input
+              type="url"
+              value={url}
+              onChange={e => setUrl(e.target.value)}
+              placeholder="https://your-server.example.com or http://localhost:8420"
+              className="flex-1 px-3 py-2 rounded-lg border border-[var(--color-border)]
+                bg-[var(--color-bg)] text-[var(--color-text-primary)] text-sm
+                focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-main)]
+                placeholder:text-[var(--color-text-muted)]"
+            />
+            <button
+              onClick={handleTestConnection}
+              disabled={testing || !url.trim()}
+              className="px-3 py-2 rounded-lg text-xs font-medium cursor-pointer
+                border border-[var(--color-border)] text-[var(--color-text-secondary)]
+                bg-[var(--color-bg)] hover:bg-[var(--color-surface-alt)] transition-colors
+                disabled:opacity-40 disabled:cursor-not-allowed whitespace-nowrap"
+            >
+              {testing ? 'Testing...' : 'Test'}
+            </button>
+          </div>
+        </div>
+
+        {/* Presets */}
+        <div>
+          <label className="block text-xs font-medium text-[var(--color-text-muted)] mb-2">
+            Quick presets
+          </label>
+          <div className="flex flex-wrap gap-2">
+            <button
+              onClick={() => handlePreset(import.meta.env.VITE_HUB_URL || '')}
+              className="px-3 py-1.5 rounded-lg text-xs font-medium cursor-pointer
+                border border-[var(--color-border)] text-[var(--color-text-secondary)]
+                bg-[var(--color-bg)] hover:bg-[var(--color-surface-alt)] transition-colors"
+            >
+              Use Lingua Cloud
+            </button>
+            <button
+              onClick={() => handlePreset('http://localhost:8420')}
+              className="px-3 py-1.5 rounded-lg text-xs font-medium cursor-pointer
+                border border-[var(--color-border)] text-[var(--color-text-secondary)]
+                bg-[var(--color-bg)] hover:bg-[var(--color-surface-alt)] transition-colors"
+            >
+              Use Local (localhost:8420)
+            </button>
+            <button
+              onClick={() => handlePreset('')}
+              className="px-3 py-1.5 rounded-lg text-xs font-medium cursor-pointer
+                border border-[var(--color-border)] text-[var(--color-text-secondary)]
+                bg-[var(--color-bg)] hover:bg-[var(--color-surface-alt)] transition-colors"
+            >
+              Disable AI
+            </button>
+          </div>
+        </div>
+
+        {/* Help text */}
+        <div className="text-xs text-[var(--color-text-muted)] space-y-1">
+          <p><strong>Lingua Cloud</strong> — connects to the hosted AI server (requires internet). Best for most users.</p>
+          <p><strong>Local</strong> — for developers running the Creative Hub backend on their own machine.</p>
+          <p><strong>Disable AI</strong> — the app works fully offline with flashcards, quizzes, and browser TTS. AI chat, story generation, and grammar lessons won't be available.</p>
+        </div>
+
+        {/* Save */}
+        <button
+          onClick={handleSave}
+          className="w-full py-2.5 rounded-xl text-sm font-semibold cursor-pointer
+            bg-[var(--color-primary-main)] text-white hover:opacity-90 transition-opacity"
+        >
+          Save
+        </button>
+      </div>
+    </section>
   )
 }

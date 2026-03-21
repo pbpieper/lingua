@@ -47,7 +47,7 @@ const FB_VARIABLES: ToolVariable[] = [
 type FBVars = { itemCount: string; showHint: boolean }
 const FB_DEFAULT_VARS: FBVars = { itemCount: '10', showHint: true }
 
-const HUB_URL = 'http://localhost:8420'
+import { getHubApiUrl } from '@/services/aiConfig'
 
 function shuffle<T>(arr: T[]): T[] {
   const a = [...arr]
@@ -117,7 +117,10 @@ async function generateStoryText(words: Word[]): Promise<string> {
   const prompt = `Write a short paragraph (3-5 sentences) in ${lang} that naturally uses these words: ${wordList}. Each target word MUST appear exactly once. Do not translate. Output ONLY the paragraph, nothing else.`
   const system = 'You are a language learning assistant. Write short, natural paragraphs for fill-in-the-blank exercises. Keep sentences simple (A2-B1 level). Use everyday topics.'
 
-  const res = await fetch(`${HUB_URL}/generate/text`, {
+  const textUrl = getHubApiUrl('/generate/text')
+  if (!textUrl) throw new Error('AI backend is not configured')
+
+  const res = await fetch(textUrl, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ prompt, system }),
@@ -130,10 +133,14 @@ async function generateStoryText(words: Word[]): Promise<string> {
   if (data.job_id) {
     for (let i = 0; i < 30; i++) {
       await new Promise(r => setTimeout(r, 2000))
-      const statusRes = await fetch(`${HUB_URL}/jobs/${data.job_id}`)
+      const jobUrl = getHubApiUrl(`/jobs/${data.job_id}`)
+      if (!jobUrl) throw new Error('AI backend is not configured')
+      const statusRes = await fetch(jobUrl)
       const status = await statusRes.json() as { status: string }
       if (status.status === 'completed') {
-        const outputRes = await fetch(`${HUB_URL}/jobs/${data.job_id}/output`)
+        const outputUrl = getHubApiUrl(`/jobs/${data.job_id}/output`)
+        if (!outputUrl) throw new Error('AI backend is not configured')
+        const outputRes = await fetch(outputUrl)
         const result = await outputRes.json() as { response?: string; text?: string }
         return result.response ?? result.text ?? ''
       }

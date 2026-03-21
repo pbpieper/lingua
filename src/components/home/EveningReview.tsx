@@ -4,6 +4,7 @@ import toast from 'react-hot-toast'
 import { useLearningLocales } from '@/hooks/useLearningLocales'
 import { loadLearningPrefs, saveLearningPrefs, todayKey } from '@/services/clientStore'
 import type { LinguaLearningPrefs } from '@/types/session'
+import { FeedbackCollector } from '@/components/feedback/FeedbackCollector'
 
 // ---------------------------------------------------------------------------
 // Types
@@ -149,7 +150,7 @@ const TOOL_DISPLAY: Record<string, { label: string; icon: string }> = {
 // HUB helper for AI tutor chat
 // ---------------------------------------------------------------------------
 
-const HUB_URL = 'http://localhost:8420'
+import { getHubApiUrl } from '@/services/aiConfig'
 
 async function chatWithTutor(messages: ChatMessage[], sessionSummary: string): Promise<string> {
   const system =
@@ -162,7 +163,10 @@ async function chatWithTutor(messages: ChatMessage[], sessionSummary: string): P
     .map(m => `${m.role === 'user' ? 'User' : 'Assistant'}: ${m.content}`)
     .join('\n')
 
-  const res = await fetch(`${HUB_URL}/generate/text`, {
+  const textUrl = getHubApiUrl('/generate/text')
+  if (!textUrl) throw new Error('AI backend is not configured')
+
+  const res = await fetch(textUrl, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ prompt: conversationContext, system }),
@@ -174,11 +178,15 @@ async function chatWithTutor(messages: ChatMessage[], sessionSummary: string): P
   if (data.job_id) {
     // Poll for result
     for (let i = 0; i < 30; i++) {
-      const poll = await fetch(`${HUB_URL}/jobs/${data.job_id}`)
+      const jobUrl = getHubApiUrl(`/jobs/${data.job_id}`)
+      if (!jobUrl) throw new Error('AI backend is not configured')
+      const poll = await fetch(jobUrl)
       if (!poll.ok) throw new Error('Poll failed')
       const job = await poll.json() as { status: string; error?: string }
       if (job.status === 'completed') {
-        const output = await fetch(`${HUB_URL}/jobs/${data.job_id}/output`)
+        const outputUrl = getHubApiUrl(`/jobs/${data.job_id}/output`)
+        if (!outputUrl) throw new Error('AI backend is not configured')
+        const output = await fetch(outputUrl)
         const result = await output.json()
         return result.response ?? result.text ?? JSON.stringify(result)
       }
@@ -511,6 +519,15 @@ export function EveningReview({
             &#10003; Feedback saved — tomorrow's session will be adjusted accordingly
           </p>
         </motion.div>
+      )}
+
+      {/* Product Feedback — natural continuation of evening review */}
+      {saved && (
+        <FeedbackCollector
+          embedded
+          heading="One more thing..."
+          subtitle="Help us make Lingua better"
+        />
       )}
 
       {/* AI Tutor Chat */}

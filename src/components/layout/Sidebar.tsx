@@ -55,12 +55,21 @@ function getToolVisibility(ctx: UnlockCtx): { visible: Set<LinguaToolId>; nextUn
   return { visible, nextUnlock }
 }
 
+function isAdminMode(): boolean {
+  if (typeof window !== 'undefined') {
+    if (new URLSearchParams(window.location.search).get('admin') === 'true') return true
+    if (localStorage.getItem('lingua-admin') === 'true') return true
+  }
+  return false
+}
+
 export function Sidebar({ onToolClick, dueCount = 0 }: {
   onToolClick?: (toolId: LinguaToolId) => void
   dueCount?: number
 }) {
   const { activeTool, setActiveTool, totalWords, totalReviewed, wordsMastered, daysUsed } = useApp()
   const { prefs, setPref } = usePreferences()
+  const adminMode = useMemo(() => isAdminMode(), [])
 
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>(() => {
     const stored = prefs.sidebarCollapsed
@@ -144,6 +153,8 @@ export function Sidebar({ onToolClick, dueCount = 0 }: {
       {/* TRACK section — flat list */}
       <SectionLabel label="Track" />
       {trackTools.map(tool => {
+        // Hide feedback-admin unless admin mode is active
+        if (tool.id === 'feedback-admin' && !adminMode) return null
         const isVisible = showAll || visible.has(tool.id)
         if (!isVisible) return null
         return (

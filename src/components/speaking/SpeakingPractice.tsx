@@ -5,7 +5,8 @@ import * as api from '@/services/vocabApi'
 import type { Word } from '@/types/word'
 import { useLearningLocales } from '@/hooks/useLearningLocales'
 
-const HUB_URL = 'http://localhost:8420'
+import { getHubApiUrl } from '@/services/aiConfig'
+
 const POLL_INTERVAL = 2000
 
 type Mode = 'pronunciation' | 'conversation'
@@ -52,7 +53,10 @@ async function speakText(text: string, lang?: string): Promise<string | null> {
 }
 
 async function generateSpeech(text: string): Promise<string> {
-  const res = await fetch(`${HUB_URL}/generate/speech`, {
+  const speechUrl = getHubApiUrl('/generate/speech')
+  if (!speechUrl) throw new Error('AI backend is not configured')
+
+  const res = await fetch(speechUrl, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ text }),
@@ -63,7 +67,10 @@ async function generateSpeech(text: string): Promise<string> {
 }
 
 async function generateText(prompt: string, system: string): Promise<string> {
-  const res = await fetch(`${HUB_URL}/generate/text`, {
+  const textUrl = getHubApiUrl('/generate/text')
+  if (!textUrl) throw new Error('AI backend is not configured')
+
+  const res = await fetch(textUrl, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ prompt, system }),
@@ -75,7 +82,9 @@ async function generateText(prompt: string, system: string): Promise<string> {
   if (data.response) return data.response
   if (data.job_id) {
     await pollJob(data.job_id)
-    const output = await fetch(`${HUB_URL}/jobs/${data.job_id}/output`)
+    const outputUrl = getHubApiUrl(`/jobs/${data.job_id}/output`)
+    if (!outputUrl) throw new Error('AI backend is not configured')
+    const output = await fetch(outputUrl)
     const result = await output.json()
     return result.response ?? result.text ?? JSON.stringify(result)
   }
@@ -85,11 +94,15 @@ async function generateText(prompt: string, system: string): Promise<string> {
 async function pollJob(jobId: number): Promise<string> {
   const maxAttempts = 60 // 2 minutes
   for (let i = 0; i < maxAttempts; i++) {
-    const res = await fetch(`${HUB_URL}/jobs/${jobId}`)
+    const jobUrl = getHubApiUrl(`/jobs/${jobId}`)
+    if (!jobUrl) throw new Error('AI backend is not configured')
+    const res = await fetch(jobUrl)
     if (!res.ok) throw new Error(`Poll failed: ${res.status}`)
     const job = await res.json() as { status: string; error?: string }
     if (job.status === 'completed') {
-      return `${HUB_URL}/jobs/${jobId}/output`
+      const outputUrl = getHubApiUrl(`/jobs/${jobId}/output`)
+      if (!outputUrl) throw new Error('AI backend is not configured')
+      return outputUrl
     }
     if (job.status === 'failed') {
       throw new Error(job.error ?? 'Job failed')

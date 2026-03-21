@@ -31,6 +31,7 @@ const Community = lazy(() => import('@/components/community/Community').then(m =
 const Achievements = lazy(() => import('@/components/achievements/Achievements').then(m => ({ default: m.Achievements })))
 const VocabDashboard = lazy(() => import('@/components/wordbank/VocabDashboard').then(m => ({ default: m.VocabDashboard })))
 const Settings = lazy(() => import('@/components/settings/Settings').then(m => ({ default: m.Settings })))
+const FeedbackDashboard = lazy(() => import('@/components/feedback/FeedbackDashboard').then(m => ({ default: m.FeedbackDashboard })))
 const MediaLibrary = lazy(() => import('@/components/media/MediaLibrary').then(m => ({ default: m.MediaLibrary })))
 import { TOOLS } from '@/types/tools'
 import type { LinguaToolId } from '@/types/tools'
@@ -68,6 +69,7 @@ function ToolContent({ toolId }: { toolId: LinguaToolId }) {
     case 'achievements': return <Achievements />
     case 'dashboard': return <VocabDashboard />
     case 'settings': return <Settings />
+    case 'feedback-admin': return <FeedbackDashboard />
     default: return <p className="text-[var(--color-text-muted)]">Select a tool</p>
   }
 }

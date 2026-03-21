@@ -31,6 +31,12 @@ interface AppContextValue {
   activeStudyVersion: number
   setActiveStudyWords: (words: Word[], opts?: { label?: string; source?: ActiveStudySource }) => void
   clearActiveStudyWords: () => void
+  /** Multi-language support */
+  learningLanguages: string[]
+  activeLanguage: string
+  setActiveLanguage: (lang: string) => void
+  addLearningLanguage: (lang: string) => void
+  removeLearningLanguage: (lang: string) => void
 }
 
 const AppCtx = createContext<AppContextValue | null>(null)
@@ -49,6 +55,28 @@ const USER_ID = (() => {
   return id
 })()
 
+/** Read initial languages from onboarding + preferences */
+function getInitialLanguages(): { learning: string[]; active: string } {
+  try {
+    const onboarding = localStorage.getItem('lingua-onboarding')
+    const prefs = localStorage.getItem('lingua-preferences')
+    const onb = onboarding ? JSON.parse(onboarding) : null
+    const prf = prefs ? JSON.parse(prefs) : null
+
+    // Gather unique language codes from onboarding + any saved list of learning languages
+    const langs = new Set<string>()
+    if (onb?.targetLanguage) langs.add(onb.targetLanguage)
+    if (prf?.learningLanguages && Array.isArray(prf.learningLanguages)) {
+      for (const l of prf.learningLanguages) if (l) langs.add(l)
+    }
+    const arr = Array.from(langs)
+    const active = prf?.activeLanguage || arr[0] || ''
+    return { learning: arr, active }
+  } catch {
+    return { learning: [], active: '' }
+  }
+}
+
 export function AppProvider({ children }: { children: ReactNode }) {
   const [activeTool, setActiveTool] = useState<LinguaToolId>('home')
   const [lists, setLists] = useState<VocabList[]>([])
@@ -63,6 +91,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [activeStudyLabel, setActiveStudyLabel] = useState<string | null>(null)
   const [activeStudySource, setActiveStudySource] = useState<ActiveStudySource | null>(null)
   const [activeStudyVersion, setActiveStudyVersion] = useState(0)
+
+  // Multi-language state
+  const [langInit] = useState(getInitialLanguages)
+  const [learningLanguages, setLearningLanguages] = useState<string[]>(langInit.learning)
+  const [activeLanguage, setActiveLanguageState] = useState<string>(langInit.active)
 
   const setActiveStudyWords = useCallback((words: Word[], opts?: { label?: string; source?: ActiveStudySource }) => {
     const w = words.filter(Boolean)
@@ -84,6 +117,46 @@ export function AppProvider({ children }: { children: ReactNode }) {
     setActiveStudySource(null)
     setActiveStudyVersion(v => v + 1)
   }, [])
+
+  // Persist language changes to preferences
+  const persistLanguages = useCallback((langs: string[], active: string) => {
+    try {
+      const raw = localStorage.getItem('lingua-preferences')
+      const prefs = raw ? JSON.parse(raw) : {}
+      prefs.learningLanguages = langs
+      prefs.activeLanguage = active
+      localStorage.setItem('lingua-preferences', JSON.stringify(prefs))
+    } catch { /* ignore */ }
+  }, [])
+
+  const setActiveLanguage = useCallback((lang: string) => {
+    setActiveLanguageState(lang)
+    setLearningLanguages(prev => {
+      const next = prev.includes(lang) ? prev : [...prev, lang]
+      persistLanguages(next, lang)
+      return next
+    })
+  }, [persistLanguages])
+
+  const addLearningLanguage = useCallback((lang: string) => {
+    setLearningLanguages(prev => {
+      if (prev.includes(lang)) return prev
+      const next = [...prev, lang]
+      persistLanguages(next, activeLanguage || lang)
+      if (!activeLanguage) setActiveLanguageState(lang)
+      return next
+    })
+  }, [persistLanguages, activeLanguage])
+
+  const removeLearningLanguage = useCallback((lang: string) => {
+    setLearningLanguages(prev => {
+      const next = prev.filter(l => l !== lang)
+      const newActive = lang === activeLanguage ? (next[0] || '') : activeLanguage
+      if (lang === activeLanguage) setActiveLanguageState(newActive)
+      persistLanguages(next, newActive)
+      return next
+    })
+  }, [persistLanguages, activeLanguage])
 
   useEffect(() => {
     syncPrefsFromOnboardingIfNeeded()
@@ -120,6 +193,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
       daysUsed, setDaysUsed,
       activeStudyWords, activeStudyLabel, activeStudySource, activeStudyVersion,
       setActiveStudyWords, clearActiveStudyWords,
+      learningLanguages, activeLanguage, setActiveLanguage,
+      addLearningLanguage, removeLearningLanguage,
     }}>
       {children}
     </AppCtx.Provider>

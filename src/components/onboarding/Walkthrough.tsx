@@ -60,7 +60,7 @@ export function Walkthrough() {
       flashcards: 'Flashcards', match: 'Match', fillblank: 'Fill Blank',
       multichoice: 'Quiz', speaking: 'Speaking', reading: 'Reading',
       prelearn: 'Pre-Learn', listening: 'Listening', writing: 'Writing', cloze: 'Sentence Cloze',
-      stories: 'Stories', grammar: 'Grammar', phrases: 'Phrases', universe: 'Universe', teacher: 'Teacher', community: 'Community', achievements: 'Achievements', dashboard: 'Progress', settings: 'Settings',
+      stories: 'Stories', grammar: 'Grammar', phrases: 'Phrases', universe: 'Universe', teacher: 'Teacher', community: 'Community', achievements: 'Achievements', dashboard: 'Progress', 'feedback-admin': 'Feedback', settings: 'Settings',
     }
     const label = labels[toolId]
     let targetBtn: Element | null = null

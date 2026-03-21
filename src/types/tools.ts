@@ -21,6 +21,7 @@ export type LinguaToolId =
   | 'community'
   | 'achievements'
   | 'dashboard'
+  | 'feedback-admin'
   | 'settings'
 
 export type ToolCategory = 'home' | 'practice' | 'track' | 'social'
@@ -73,6 +74,7 @@ export const TOOLS: ToolDef[] = [
   { id: 'universe', label: 'Universe', icon: '\u{1F30C}', description: 'Your vocabulary galaxy', category: 'track' },
   { id: 'achievements', label: 'Achievements', icon: '\u{1F3C6}', description: 'Badges, XP, and milestones', category: 'track' },
   { id: 'grammar', label: 'Grammar', icon: '\u{1F4D0}', description: 'AI-generated grammar lessons with exercises', category: 'track' },
+  { id: 'feedback-admin', label: 'Feedback', icon: '\u{1F4CB}', description: 'View user feedback & analytics', category: 'track' },
 
   // --- Social ---
   { id: 'teacher', label: 'Teacher', icon: '\u{1F3EB}', description: 'Manage classes & assignments', category: 'social' },

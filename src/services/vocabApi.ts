@@ -4,17 +4,22 @@
  */
 
 import type { Word, WordInput, ReviewResult, VocabList, VocabSession, VocabStats } from '@/types/word'
+import { getHubApiUrl, isHubConfigured } from '@/services/aiConfig'
 
-const BASE_URL = 'http://localhost:8420'
+function requireHub(path: string): string {
+  const url = getHubApiUrl(path)
+  if (!url) throw new Error('AI backend is not configured. Go to Settings to set up your AI backend.')
+  return url
+}
 
 async function get<T>(path: string): Promise<T> {
-  const res = await fetch(`${BASE_URL}${path}`)
+  const res = await fetch(requireHub(path))
   if (!res.ok) throw new Error(`API error: ${res.status} ${await res.text()}`)
   return res.json()
 }
 
 async function post<T>(path: string, body: unknown): Promise<T> {
-  const res = await fetch(`${BASE_URL}${path}`, {
+  const res = await fetch(requireHub(path), {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body),
@@ -24,7 +29,7 @@ async function post<T>(path: string, body: unknown): Promise<T> {
 }
 
 async function put<T>(path: string, body: unknown): Promise<T> {
-  const res = await fetch(`${BASE_URL}${path}`, {
+  const res = await fetch(requireHub(path), {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body),
@@ -34,7 +39,7 @@ async function put<T>(path: string, body: unknown): Promise<T> {
 }
 
 async function del(path: string): Promise<void> {
-  const res = await fetch(`${BASE_URL}${path}`, { method: 'DELETE' })
+  const res = await fetch(requireHub(path), { method: 'DELETE' })
   if (!res.ok) throw new Error(`API error: ${res.status}`)
 }
 
@@ -222,7 +227,7 @@ export async function getJobStatus(jobId: number): Promise<{ id: number; status:
 }
 
 export function getJobOutputUrl(jobId: number): string {
-  return `${BASE_URL}/jobs/${jobId}/output`
+  return requireHub(`/jobs/${jobId}/output`)
 }
 
 // --- Community & Engagement ---
@@ -517,8 +522,11 @@ export async function generatePhraseScenario(
 // --- Health ---
 
 export async function isAvailable(): Promise<boolean> {
+  if (!isHubConfigured()) return false
   try {
-    await fetch(`${BASE_URL}/health`, { signal: AbortSignal.timeout(2000) })
+    const url = getHubApiUrl('/health')
+    if (!url) return false
+    await fetch(url, { signal: AbortSignal.timeout(2000) })
     return true
   } catch {
     return false

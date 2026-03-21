@@ -2,6 +2,8 @@ import { useState, useEffect, useCallback, useMemo } from 'react'
 import { motion } from 'framer-motion'
 import toast from 'react-hot-toast'
 import { useApp } from '@/context/AppContext'
+import { useAuth } from '@/context/AuthContext'
+import { LanguageSwitcher } from '@/components/atoms/LanguageSwitcher'
 import type { LinguaToolId } from '@/types/tools'
 import * as api from '@/services/vocabApi'
 import type { VocabStats, VocabSession } from '@/types/word'
@@ -16,6 +18,8 @@ import {
 } from '@/services/clientStore'
 import { buildDailySessionSteps, recordStepCompletion, categoryLabel, categoryIcon } from '@/services/dailySessionPlan'
 import { SessionDebrief } from '@/components/home/SessionDebrief'
+import { FeedbackCollector, shouldShowWelcomeBack } from '@/components/feedback/FeedbackCollector'
+import { AnimatePresence } from 'framer-motion'
 
 /* ------------------------------------------------------------------ */
 /*  Helpers                                                            */
@@ -112,12 +116,14 @@ const cardItem = {
 
 export function DailyReview() {
   const { userId, hubAvailable, lists, setActiveTool, setWordsDue, setCurrentListId } = useApp()
+  const { user, isAuthenticated } = useAuth()
 
   const [stats, setStats] = useState<VocabStats | null>(null)
   const [sessions, setSessions] = useState<VocabSession[]>([])
   const [loading, setLoading] = useState(true)
   const [dailyPlan, setDailyPlan] = useState<DailyPlanProgress>(() => loadDailyPlanProgress(todayKey()))
   const [debriefOpen, setDebriefOpen] = useState(false)
+  const [welcomeBackOpen, setWelcomeBackOpen] = useState(() => shouldShowWelcomeBack())
 
   const markStepCompleted = useCallback((step: SessionStep) => {
     recordStepCompletion(step.category, step.toolId)
@@ -247,9 +253,12 @@ export function DailyReview() {
       <motion.div variants={fadeUp}>
         <div className="flex items-start justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-[var(--color-text-primary)]">{greeting.primary} &#128075;</h1>
+            <h1 className="text-2xl font-bold text-[var(--color-text-primary)]">
+              {greeting.primary}{isAuthenticated && user?.displayName ? `, ${user.displayName}` : ''} &#128075;
+            </h1>
             {greeting.subtitle && <p className="text-sm text-[var(--color-text-muted)] mt-0.5">{greeting.subtitle}</p>}
             <p className="text-sm text-[var(--color-text-muted)] mt-1">{formatDate()}</p>
+            <div className="mt-2"><LanguageSwitcher compact /></div>
           </div>
           {totalWords > 0 && (
             <div className="text-right">
@@ -399,6 +408,32 @@ export function DailyReview() {
       )}
 
       <SessionDebrief open={debriefOpen} onClose={closeDebrief} completedCount={planCompletedCount} totalCount={studyPlan.length} />
+
+      {/* Welcome-back feedback modal */}
+      <AnimatePresence>
+        {welcomeBackOpen && (
+          <motion.div
+            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40"
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            onClick={() => setWelcomeBackOpen(false)}
+          >
+            <motion.div
+              className="max-w-md w-full rounded-2xl p-5 shadow-xl"
+              style={{ background: 'var(--color-surface)', border: '1px solid var(--color-border)' }}
+              initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.95, opacity: 0 }}
+              onClick={e => e.stopPropagation()}
+            >
+              <div className="text-center mb-4">
+                <div className="text-3xl mb-2">{'\uD83D\uDC4B'}</div>
+                <h2 className="text-lg font-bold text-[var(--color-text-primary)]">Welcome back!</h2>
+                <p className="text-sm text-[var(--color-text-muted)] mt-1">We missed you. Quick question about your last session:</p>
+              </div>
+              <FeedbackCollector embedded heading="How was your last session?" subtitle="Your feedback helps us improve"
+                onComplete={() => setWelcomeBackOpen(false)} onDismiss={() => setWelcomeBackOpen(false)} />
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </motion.div>
   )
 }
