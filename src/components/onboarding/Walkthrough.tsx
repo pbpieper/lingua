@@ -62,6 +62,8 @@ export function Walkthrough() {
       speaking: 'Speaking', reading: 'Reading',
       prelearn: 'Pre-Learn', listening: 'Listening', writing: 'Writing', cloze: 'Sentence Cloze',
       stories: 'Stories', grammar: 'Grammar', phrases: 'Phrases', universe: 'Universe', teacher: 'Teacher', community: 'Community', achievements: 'Achievements', dashboard: 'Progress', 'feedback-admin': 'Feedback', settings: 'Settings',
+      rsvp: 'RSVP Reader', scenarios: 'Scenarios', documents: 'Documents', journey: 'Journey',
+      dreamjournal: 'Dream Journal', pronunciationlab: 'Pronunciation', keyboardtrainer: 'Keyboard',
     }
     const label = labels[toolId]
     let targetBtn: Element | null = null

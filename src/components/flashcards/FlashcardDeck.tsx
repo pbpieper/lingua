@@ -22,9 +22,9 @@ interface SessionStats {
 }
 
 const RATING_BUTTONS = [
-  { label: 'Didn\'t know', subtitle: 'See again soon', quality: 1, key: '1', color: 'var(--color-incorrect)', bg: '#FEE2E2' },
+  { label: 'Didn\'t know', subtitle: 'See again soon', quality: 1, key: '1', color: 'var(--color-incorrect)', bg: 'var(--color-incorrect-bg)' },
   { label: 'Almost', subtitle: 'Review tomorrow', quality: 3, key: '2', color: 'var(--color-accent-dark)', bg: 'var(--color-accent-light)' },
-  { label: 'Got it', subtitle: 'Review in a few days', quality: 4, key: '3', color: 'var(--color-correct)', bg: '#D1FAE5' },
+  { label: 'Got it', subtitle: 'Review in a few days', quality: 4, key: '3', color: 'var(--color-correct)', bg: 'var(--color-correct-bg)' },
   { label: 'Too easy', subtitle: 'Review later', quality: 5, key: '4', color: 'var(--color-primary-main)', bg: 'var(--color-primary-faded)' },
 ] as const
 
@@ -466,9 +466,9 @@ export function FlashcardDeck() {
         <div
           className="flex items-center justify-between rounded-lg px-4 py-2.5 text-sm"
           style={{
-            background: daysLeft !== null && daysLeft < 0 ? '#FEE2E2' : 'var(--color-accent-light)',
-            border: `1px solid ${daysLeft !== null && daysLeft < 0 ? '#ef4444' : 'var(--color-accent-dark)'}`,
-            color: daysLeft !== null && daysLeft < 0 ? '#ef4444' : 'var(--color-accent-dark)',
+            background: daysLeft !== null && daysLeft < 0 ? 'var(--color-incorrect-bg)' : 'var(--color-accent-light)',
+            border: `1px solid ${daysLeft !== null && daysLeft < 0 ? 'var(--color-incorrect)' : 'var(--color-accent-dark)'}`,
+            color: daysLeft !== null && daysLeft < 0 ? 'var(--color-incorrect)' : 'var(--color-accent-dark)',
           }}
         >
           <span className="font-medium">
@@ -605,10 +605,10 @@ export function FlashcardDeck() {
 
       {/* Score pills */}
       <div className="flex items-center gap-3 justify-center">
-        <span className="text-xs font-medium px-2.5 py-1 rounded-full" style={{ background: '#D1FAE5', color: 'var(--color-correct)' }}>
+        <span className="text-xs font-medium px-2.5 py-1 rounded-full" style={{ background: 'var(--color-correct-bg)', color: 'var(--color-correct)' }}>
           {stats.correct} correct
         </span>
-        <span className="text-xs font-medium px-2.5 py-1 rounded-full" style={{ background: '#FEE2E2', color: 'var(--color-incorrect)' }}>
+        <span className="text-xs font-medium px-2.5 py-1 rounded-full" style={{ background: 'var(--color-incorrect-bg)', color: 'var(--color-incorrect)' }}>
           {stats.wrong} wrong
         </span>
       </div>
@@ -747,7 +747,7 @@ export function FlashcardDeck() {
                   className="flex-1 px-4 py-2.5 rounded-xl text-sm outline-none disabled:opacity-60"
                   style={{
                     background: typingChecked
-                      ? typingCorrect ? '#D1FAE5' : '#FEE2E2'
+                      ? typingCorrect ? 'var(--color-correct-bg)' : 'var(--color-incorrect-bg)'
                       : 'var(--color-surface-alt)',
                     border: `2px solid ${typingChecked
                       ? typingCorrect ? 'var(--color-correct)' : 'var(--color-incorrect)'

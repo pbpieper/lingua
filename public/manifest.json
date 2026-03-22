@@ -1,0 +1,21 @@
+{
+  "name": "Lingua — AI-Powered Language Learning",
+  "short_name": "Lingua",
+  "description": "Master vocabulary in 15+ languages with flashcards, games, and adaptive AI-powered learning.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#FAFBFC",
+  "theme_color": "#2563EB",
+  "icons": [
+    {
+      "src": "/manifest-icon-192.svg",
+      "sizes": "192x192",
+      "type": "image/svg+xml"
+    },
+    {
+      "src": "/manifest-icon-512.svg",
+      "sizes": "512x512",
+      "type": "image/svg+xml"
+    }
+  ]
+}

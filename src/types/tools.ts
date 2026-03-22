@@ -25,6 +25,13 @@ export type LinguaToolId =
   | 'dashboard'
   | 'feedback-admin'
   | 'settings'
+  | 'rsvp'
+  | 'scenarios'
+  | 'documents'
+  | 'journey'
+  | 'dreamjournal'
+  | 'pronunciationlab'
+  | 'keyboardtrainer'
 
 export type ToolCategory = 'home' | 'practice' | 'track' | 'social'
 
@@ -54,13 +61,18 @@ export const TOOLS: ToolDef[] = [
   { id: 'stories', label: 'Stories', icon: '\u{1F4D5}', description: 'AI-generated graded reading', category: 'practice', practiceGroup: 'reading' },
   { id: 'cloze', label: 'Sentence Cloze', icon: '\u{1F4DD}', description: 'Fill in missing words in context sentences', category: 'practice', practiceGroup: 'reading' },
   { id: 'reading', label: 'Reading', icon: '\u{1F4D6}', description: 'Interactive text reading', category: 'practice', practiceGroup: 'reading' },
+  { id: 'rsvp', label: 'Speed Reader', icon: '\u{26A1}', description: 'RSVP speed reading with unknown word detection', category: 'practice', practiceGroup: 'reading' },
+  { id: 'documents', label: 'Documents', icon: '\u{1F4C4}', description: 'Read real-world documents with vocabulary help', category: 'practice', practiceGroup: 'reading' },
 
   // --- Practice: Writing ---
   { id: 'writing', label: 'Writing', icon: '\u270D\uFE0F', description: 'Practice writing with AI correction', category: 'practice', practiceGroup: 'writing' },
   { id: 'phrases', label: 'Phrases', icon: '\u{1F4AC}', description: 'Practice real-world phrase scenarios', category: 'practice', practiceGroup: 'writing' },
+  { id: 'dreamjournal', label: 'Dream Journal', icon: '\u{1F4D4}', description: 'Daily writing practice with vocabulary analysis', category: 'practice', practiceGroup: 'writing' },
 
   // --- Practice: Speaking ---
   { id: 'speaking', label: 'Speaking', icon: '\u{1F5E3}\uFE0F', description: 'Pronunciation & conversation', category: 'practice', practiceGroup: 'speaking' },
+  { id: 'pronunciationlab', label: 'Pronunciation Lab', icon: '\u{1F399}\uFE0F', description: 'Record, compare, and improve pronunciation', category: 'practice', practiceGroup: 'speaking' },
+  { id: 'scenarios', label: 'Scenarios', icon: '\u{1F3AF}', description: 'Survival phrases for real-world situations', category: 'practice', practiceGroup: 'speaking' },
 
   // --- Practice: Listening ---
   { id: 'listening', label: 'Listening', icon: '\u{1F442}', description: 'Hear words and type what you hear', category: 'practice', practiceGroup: 'listening' },
@@ -72,12 +84,14 @@ export const TOOLS: ToolDef[] = [
   { id: 'speedtyping', label: 'Speed Typing', icon: '\u{26A1}', description: 'Translate words against the clock', category: 'practice', practiceGroup: 'games' },
   { id: 'wordassociation', label: 'Word Association', icon: '\u{1F50D}', description: 'Find related words from your vocabulary', category: 'practice', practiceGroup: 'games' },
   { id: 'flashcards', label: 'Flashcards', icon: '\u{1F0CF}', description: 'Spaced repetition review', category: 'practice', practiceGroup: 'games' },
+  { id: 'keyboardtrainer', label: 'Keyboard', icon: '\u{2328}\uFE0F', description: 'Practice typing in target language', category: 'practice', practiceGroup: 'games' },
 
   // --- Track ---
   { id: 'dashboard', label: 'Progress', icon: '\u{1F4CA}', description: 'Track your learning', category: 'track' },
   { id: 'universe', label: 'Universe', icon: '\u{1F30C}', description: 'Your vocabulary galaxy', category: 'track' },
   { id: 'achievements', label: 'Achievements', icon: '\u{1F3C6}', description: 'Badges, XP, and milestones', category: 'track' },
   { id: 'grammar', label: 'Grammar', icon: '\u{1F4D0}', description: 'AI-generated grammar lessons with exercises', category: 'track' },
+  { id: 'journey', label: 'Journey', icon: '\u{1F5FA}\uFE0F', description: 'Your learning path and milestones', category: 'track' },
   { id: 'feedback-admin', label: 'Feedback', icon: '\u{1F4CB}', description: 'View user feedback & analytics', category: 'track' },
 
   // --- Social ---

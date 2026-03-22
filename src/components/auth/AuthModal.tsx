@@ -1,4 +1,4 @@
-import { useState, useCallback, type FormEvent } from 'react'
+import { useState, useCallback, useEffect, type FormEvent } from 'react'
 import { useAuth } from '@/context/AuthContext'
 import { isSupabaseConfigured } from '@/services/supabase'
 import { syncFromCloud } from '@/services/dataSync'
@@ -20,6 +20,16 @@ type Tab = 'signin' | 'signup'
 
 export function AuthModal({ open, onClose }: AuthModalProps) {
   const { signIn, signUp, signInWithGoogle, error, clearError, user } = useAuth()
+
+  // Close on Escape
+  useEffect(() => {
+    if (!open) return
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') { e.preventDefault(); onClose() }
+    }
+    window.addEventListener('keydown', handler)
+    return () => window.removeEventListener('keydown', handler)
+  }, [open, onClose])
 
   const [tab, setTab] = useState<Tab>('signin')
   const [email, setEmail] = useState('')

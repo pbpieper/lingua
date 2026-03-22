@@ -5,6 +5,7 @@ import { useApp } from '@/context/AppContext'
 import * as api from '@/services/vocabApi'
 import { TOOLS } from '@/types/tools'
 import type { VocabStats, VocabList, VocabSession } from '@/types/word'
+import { VocabHeatMap } from '@/components/wordbank/VocabHeatMap'
 
 // ─── Main Component ───────────────────────────────────────────────
 
@@ -92,6 +93,15 @@ export function VocabDashboard() {
             <EmptyState text="Start studying to see your activity" />
           )}
         </SectionCard>
+      </motion.div>
+
+      {/* Vocabulary Heat Map (90-day GitHub-style) */}
+      <motion.div
+        initial={{ opacity: 0, y: 12 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.3, delay: 0.15 }}
+      >
+        <VocabHeatMap stats={stats} />
       </motion.div>
 
       {/* Progress Over Time + Mastery Breakdown */}

@@ -711,6 +711,30 @@ export function Settings() {
         </div>
       </SectionCard>
 
+      {/* ─── Accessibility ──────────────────────── */}
+      <SectionCard title="Accessibility">
+        <div className="space-y-4">
+          <Toggle
+            checked={prefs.largeTextMode || false}
+            onChange={(v) => setPref('largeTextMode', v)}
+            label="Large Text Mode"
+            description="Increase all font sizes by 1.5x for easier reading"
+          />
+          <Toggle
+            checked={prefs.simpleMode || false}
+            onChange={(v) => setPref('simpleMode', v)}
+            label="Simple Mode"
+            description="Show only core tools: Home, Flashcards, Match Game, Word Bank"
+          />
+          <Toggle
+            checked={prefs.highContrast || false}
+            onChange={(v) => setPref('highContrast', v)}
+            label="High Contrast"
+            description="Increase contrast for better visibility"
+          />
+        </div>
+      </SectionCard>
+
       {/* ─── Danger Zone ───────────────────────── */}
       <SectionCard title="Danger Zone" danger>
         <div className="space-y-3">

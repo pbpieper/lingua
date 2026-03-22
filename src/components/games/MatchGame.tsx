@@ -315,8 +315,16 @@ export function MatchGame() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center py-20">
-        <span className="text-sm" style={{ color: 'var(--color-text-muted)' }}>Loading words...</span>
+      <div className="space-y-4 animate-pulse py-6">
+        <div className="flex items-center justify-between">
+          <div className="h-6 w-36 rounded-lg bg-[var(--color-surface-alt)]" />
+          <div className="h-5 w-20 rounded bg-[var(--color-surface-alt)]" />
+        </div>
+        <div className="grid grid-cols-3 sm:grid-cols-4 gap-3">
+          {Array.from({ length: 12 }).map((_, i) => (
+            <div key={i} className="aspect-[3/2] rounded-xl bg-[var(--color-surface-alt)]" />
+          ))}
+        </div>
       </div>
     )
   }

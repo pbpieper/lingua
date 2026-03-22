@@ -324,6 +324,8 @@ export function VocabUniverse() {
   const [selectedStar, setSelectedStar] = useState<StarData | null>(null)
   const [activeConstellation, setActiveConstellation] = useState<number | null>(null)
   const [viewMode, setViewMode] = useState<ViewMode>('galaxy')
+  const [_searchQuery, _setSearchQuery] = useState('')
+  const [_masteryFilter, _setMasteryFilter] = useState<MasteryLevel | 'all'>('all')
   const svgRef = useRef<SVGSVGElement>(null)
 
   // Zoom & pan state

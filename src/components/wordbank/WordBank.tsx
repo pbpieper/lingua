@@ -261,6 +261,17 @@ const CEFR_ORDER = ['A1', 'A2', 'B1', 'B2', 'C1', 'C2']
 
 type UploadMode = 'manual' | 'paste' | 'ai'
 
+function useEscapeClose(open: boolean, onClose: () => void) {
+  useEffect(() => {
+    if (!open) return
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') { e.preventDefault(); onClose() }
+    }
+    window.addEventListener('keydown', handler)
+    return () => window.removeEventListener('keydown', handler)
+  }, [open, onClose])
+}
+
 function AddWordsModal({
   open,
   onClose,
@@ -280,6 +291,7 @@ function AddWordsModal({
 }) {
   const [mode, setMode] = useState<UploadMode>('manual')
   const [loading, setLoading] = useState(false)
+  useEscapeClose(open, onClose)
 
   // Manual fields
   const [manualLemma, setManualLemma] = useState('')
@@ -714,6 +726,7 @@ function MoveToListModal({
   userId: string
   onMoved: () => void
 }) {
+  useEscapeClose(open, onClose)
   const [moving, setMoving] = useState(false)
 
   if (!open) return null
@@ -1343,7 +1356,7 @@ export function WordBank() {
                 {dl && !isEditing && (
                   <span
                     className="font-medium"
-                    style={{ color: days !== null && days < 0 ? '#ef4444' : days !== null && days <= 3 ? '#f59e0b' : 'var(--color-text-muted)' }}
+                    style={{ color: days !== null && days < 0 ? 'var(--color-incorrect)' : days !== null && days <= 3 ? 'var(--color-accent)' : 'var(--color-text-muted)' }}
                   >
                     {days !== null && days < 0 ? `${Math.abs(days)}d overdue` : days === 0 ? 'Today' : `${days}d left`}
                   </span>

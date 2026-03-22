@@ -669,7 +669,7 @@ export function FillBlank() {
                             ? blank.correct ? 'var(--color-correct)' : 'var(--color-incorrect)'
                             : isActive ? 'var(--color-primary-main)' : 'var(--color-border)',
                           background: blank.checked
-                            ? blank.correct ? '#D1FAE5' : '#FEE2E2'
+                            ? blank.correct ? 'var(--color-correct-bg)' : 'var(--color-incorrect-bg)'
                             : isActive ? 'var(--color-primary-faded)' : 'var(--color-surface-alt)',
                           color: blank.checked
                             ? blank.correct ? 'var(--color-correct)' : 'var(--color-incorrect)'

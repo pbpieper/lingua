@@ -1,7 +1,8 @@
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useMemo } from 'react'
 import { motion } from 'framer-motion'
 import type { Word } from '@/types/word'
 import { isRTL } from '@/lib/csvParser'
+import { detectCognate, getLanguageName } from '@/lib/cognates'
 
 const LANG_BCP47: Record<string, string> = {
   ar: 'ar-SA', de: 'de-DE', en: 'en-US', es: 'es-ES', fr: 'fr-FR',
@@ -24,10 +25,21 @@ interface FlashcardCardProps {
   onFlip: () => void
   reversed?: boolean
   onEnrich?: (wordId: number) => void
+  /** All words in user's vocabulary for cognate detection */
+  allWords?: Word[]
 }
 
-export function FlashcardCard({ word, flipped, onFlip, reversed, onEnrich }: FlashcardCardProps) {
+export function FlashcardCard({ word, flipped, onFlip, reversed, onEnrich, allWords }: FlashcardCardProps) {
   const [enriching, setEnriching] = useState(false)
+
+  // Cognate detection
+  const cognateMatch = useMemo(() => {
+    if (!allWords || allWords.length < 2 || !word.lemma || word.lemma.length < 3) return null
+    const pool = allWords
+      .filter(w => w.id !== word.id && w.lemma.length >= 3)
+      .map(w => ({ word: w.lemma, language: w.language_from }))
+    return detectCognate(word.lemma, word.language_from, pool, 0.65)
+  }, [word, allWords])
 
   const handleSpeak = useCallback((e: React.MouseEvent) => {
     e.stopPropagation()
@@ -272,6 +284,26 @@ export function FlashcardCard({ word, flipped, onFlip, reversed, onEnrich }: Fla
               )}
             </button>
           ) : null}
+
+          {/* Cognate hint */}
+          {cognateMatch && (
+            <div
+              className="mt-3 px-3 py-2 rounded-lg text-xs flex items-center gap-2"
+              style={{
+                background: 'var(--color-primary-faded)',
+                border: '1px solid var(--color-primary-light, var(--color-border))',
+              }}
+              onClick={e => e.stopPropagation()}
+            >
+              <span className="text-base">&#x1F517;</span>
+              <span style={{ color: 'var(--color-text-secondary)' }}>
+                Similar to <strong style={{ color: 'var(--color-primary-main)' }}>{cognateMatch.word}</strong> in {getLanguageName(cognateMatch.language)}
+                {cognateMatch.pattern && (
+                  <span style={{ color: 'var(--color-text-muted)' }}> ({cognateMatch.pattern})</span>
+                )}
+              </span>
+            </div>
+          )}
         </div>
       </motion.div>
     </div>

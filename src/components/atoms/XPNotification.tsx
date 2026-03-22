@@ -77,8 +77,8 @@ export function XPNotificationHost() {
             className="px-4 py-2 rounded-xl shadow-lg flex items-center gap-2 pointer-events-auto"
             style={{
               background: 'var(--color-primary-main)',
-              color: '#fff',
-              boxShadow: '0 4px 16px rgba(37, 99, 235, 0.3)',
+              color: 'white',
+              boxShadow: '0 4px 16px color-mix(in srgb, var(--color-primary-main) 30%, transparent)',
             }}
           >
             <span className="text-sm font-bold">+{t.amount} XP</span>

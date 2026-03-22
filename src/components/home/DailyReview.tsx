@@ -21,6 +21,8 @@ import {
 import { buildDailySessionSteps, recordStepCompletion, categoryLabel, categoryIcon } from '@/services/dailySessionPlan'
 import { SessionDebrief } from '@/components/home/SessionDebrief'
 import { FeedbackCollector, shouldShowWelcomeBack } from '@/components/feedback/FeedbackCollector'
+import { CulturalTip } from '@/components/home/CulturalTip'
+import { ClipboardCapture } from '@/components/home/ClipboardCapture'
 
 /* ------------------------------------------------------------------ */
 /*  Helpers                                                            */
@@ -320,6 +322,13 @@ export function DailyReview() {
         </motion.div>
       )}
 
+      {/* Cultural Tip of the Day */}
+      {onboarding?.targetLanguage && (
+        <motion.div variants={fadeUp}>
+          <CulturalTip targetLanguage={onboarding.targetLanguage} />
+        </motion.div>
+      )}
+
       {/* Import prompt (empty state) */}
       {totalWords === 0 && (
         <motion.div variants={fadeUp}>
@@ -464,6 +473,9 @@ export function DailyReview() {
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Quick Capture floating button */}
+      <ClipboardCapture />
     </motion.div>
   )
 }

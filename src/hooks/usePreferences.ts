@@ -13,6 +13,12 @@ export interface Preferences {
   fontSize: string
   difficulty: string
   sessionLength: number
+  /** Accessibility: increase all font sizes by 1.5x */
+  largeTextMode: boolean
+  /** Accessibility: hide advanced features, show only core tools */
+  simpleMode: boolean
+  /** Accessibility: high contrast mode */
+  highContrast: boolean
 }
 
 const STORAGE_KEY = 'lingua-preferences'
@@ -30,6 +36,9 @@ const DEFAULTS: Preferences = {
   fontSize: 'medium',
   difficulty: 'normal',
   sessionLength: 15,
+  largeTextMode: false,
+  simpleMode: false,
+  highContrast: false,
 }
 
 /** Legacy keys that were used before consolidation */

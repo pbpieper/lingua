@@ -7,6 +7,8 @@ import { Sidebar } from './Sidebar'
 import { ActiveStudyBanner } from './ActiveStudyBanner'
 import { CommandPalette } from './CommandPalette'
 import { Walkthrough } from '@/components/onboarding/Walkthrough'
+import { ErrorBoundary } from '@/components/atoms/ErrorBoundary'
+import { usePreferences } from '@/hooks/usePreferences'
 
 // Lazy-loaded tool components for code splitting
 const DailyReview = lazy(() => import('@/components/home/DailyReview').then(m => ({ default: m.DailyReview })))
@@ -35,6 +37,13 @@ const VocabDashboard = lazy(() => import('@/components/wordbank/VocabDashboard')
 const Settings = lazy(() => import('@/components/settings/Settings').then(m => ({ default: m.Settings })))
 const FeedbackDashboard = lazy(() => import('@/components/feedback/FeedbackDashboard').then(m => ({ default: m.FeedbackDashboard })))
 const MediaLibrary = lazy(() => import('@/components/media/MediaLibrary').then(m => ({ default: m.MediaLibrary })))
+const RSVPReader = lazy(() => import('@/components/reading/RSVPReader').then(m => ({ default: m.RSVPReader })))
+const ScenarioMode = lazy(() => import('@/components/speaking/ScenarioMode').then(m => ({ default: m.ScenarioMode })))
+const DocumentReader = lazy(() => import('@/components/reading/DocumentReader').then(m => ({ default: m.DocumentReader })))
+const LearningJourneyPage = lazy(() => import('@/components/home/LearningJourney').then(m => ({ default: m.LearningJourney })))
+const DreamJournal = lazy(() => import('@/components/writing/DreamJournal').then(m => ({ default: m.DreamJournal })))
+const PronunciationLab = lazy(() => import('@/components/speaking/PronunciationLab').then(m => ({ default: m.PronunciationLab })))
+const KeyboardTrainer = lazy(() => import('@/components/games/KeyboardTrainer').then(m => ({ default: m.KeyboardTrainer })))
 import { TOOLS } from '@/types/tools'
 import type { LinguaToolId } from '@/types/tools'
 
@@ -74,6 +83,13 @@ function ToolContent({ toolId }: { toolId: LinguaToolId }) {
     case 'dashboard': return <VocabDashboard />
     case 'settings': return <Settings />
     case 'feedback-admin': return <FeedbackDashboard />
+    case 'rsvp': return <RSVPReader />
+    case 'scenarios': return <ScenarioMode />
+    case 'documents': return <DocumentReader />
+    case 'journey': return <LearningJourneyPage />
+    case 'dreamjournal': return <DreamJournal />
+    case 'pronunciationlab': return <PronunciationLab />
+    case 'keyboardtrainer': return <KeyboardTrainer />
     default: return <p className="text-[var(--color-text-muted)]">Select a tool</p>
   }
 }
@@ -96,8 +112,18 @@ export function AppShell() {
   const { activeTool, hubAvailable, wordsDue, setActiveTool: setTool } = useApp()
   const { isDark, toggle } = useTheme()
   const { showShortcuts, setShowShortcuts } = useKeyboardShortcuts()
+  const { prefs } = usePreferences()
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [commandPaletteOpen, setCommandPaletteOpen] = useState(false)
+
+  // Accessibility: apply large text and high contrast classes
+  useEffect(() => {
+    const root = document.documentElement
+    if (prefs.largeTextMode) root.classList.add('lingua-large-text')
+    else root.classList.remove('lingua-large-text')
+    if (prefs.highContrast) root.classList.add('lingua-high-contrast')
+    else root.classList.remove('lingua-high-contrast')
+  }, [prefs.largeTextMode, prefs.highContrast])
 
   // Cmd+K / Ctrl+K to open command palette
   useEffect(() => {
@@ -202,9 +228,11 @@ export function AppShell() {
 
             <ActiveStudyBanner />
 
-            <Suspense fallback={<LoadingFallback />}>
-              <ToolContent toolId={activeTool} />
-            </Suspense>
+            <ErrorBoundary>
+              <Suspense fallback={<LoadingFallback />}>
+                <ToolContent toolId={activeTool} />
+              </Suspense>
+            </ErrorBoundary>
           </div>
         </main>
       </div>

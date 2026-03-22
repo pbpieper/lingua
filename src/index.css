@@ -21,7 +21,12 @@
   --color-accent-faded: #FFFBEB;
 
   --color-correct: #059669;
+  --color-correct-bg: #D1FAE5;
   --color-incorrect: #EF4444;
+  --color-incorrect-bg: #FEE2E2;
+  --color-warning: #EAB308;
+  --color-warning-bg: #FEF9C3;
+  --color-success: #22C55E;
 
   --color-gray-100: #F3F4F6;
   --color-gray-200: #E5E7EB;
@@ -51,6 +56,10 @@
   --color-primary-faded: #1E3A5F;
   --color-primary-pale: #172544;
 
+  --color-correct-bg: #064E3B;
+  --color-incorrect-bg: #7F1D1D;
+  --color-warning-bg: #713F12;
+
   --color-text-primary: #F1F5F9;
   --color-text-secondary: #94A3B8;
   --color-text-muted: #64748B;
@@ -72,4 +81,116 @@ body {
   color: var(--color-text-primary);
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
+}
+
+/* Safe area padding for iOS bottom bar */
+.safe-area-pb {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+/* ------------------------------------------------------------------ */
+/*  Print Styles                                                       */
+/* ------------------------------------------------------------------ */
+
+@media print {
+  /* Hide UI chrome */
+  nav,
+  .md\:hidden,
+  [aria-label="Toggle sidebar"],
+  [aria-label="Toggle theme"],
+  [aria-label="Search"],
+  button,
+  .safe-area-pb {
+    display: none !important;
+  }
+
+  /* Sidebar */
+  nav.w-\[220px\],
+  .fixed.inset-y-0 {
+    display: none !important;
+  }
+
+  /* Let content fill the page */
+  body {
+    background: white !important;
+    color: #111 !important;
+  }
+
+  .flex.h-screen {
+    display: block !important;
+    height: auto !important;
+  }
+
+  main {
+    overflow: visible !important;
+    padding-bottom: 0 !important;
+  }
+
+  .max-w-\[900px\] {
+    max-width: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+
+  /* Word bank table styling for print */
+  table {
+    width: 100% !important;
+    border-collapse: collapse !important;
+  }
+
+  table th,
+  table td {
+    border: 1px solid #ccc !important;
+    padding: 6px 10px !important;
+    font-size: 12px !important;
+  }
+
+  table th {
+    background: #f3f4f6 !important;
+    font-weight: 600 !important;
+  }
+
+  /* Clean card styling for print */
+  [class*="rounded-"] {
+    border-radius: 0 !important;
+    box-shadow: none !important;
+  }
+
+  /* Page breaks */
+  h1, h2, h3 {
+    page-break-after: avoid;
+  }
+
+  .print-break-before {
+    page-break-before: always;
+  }
+}
+
+/* ── Accessibility: Large Text Mode ──────────────────── */
+.lingua-large-text {
+  font-size: 150% !important;
+}
+
+.lingua-large-text button,
+.lingua-large-text input,
+.lingua-large-text textarea,
+.lingua-large-text select {
+  font-size: inherit !important;
+}
+
+/* ── Accessibility: High Contrast Mode ───────────────── */
+.lingua-high-contrast {
+  --color-text-primary: #000000;
+  --color-text-secondary: #1a1a1a;
+  --color-text-muted: #333333;
+  --color-border: #000000;
+  --color-primary-main: #0037a5;
+}
+
+:root.dark.lingua-high-contrast {
+  --color-text-primary: #ffffff;
+  --color-text-secondary: #e0e0e0;
+  --color-text-muted: #cccccc;
+  --color-border: #ffffff;
+  --color-primary-main: #6eb5ff;
 }

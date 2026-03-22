@@ -84,11 +84,23 @@ function MasteryBar({ percent }: { percent: number }) {
 // Import Modal
 // ---------------------------------------------------------------------------
 
+function useEscapeClose(open: boolean, onClose: () => void) {
+  useEffect(() => {
+    if (!open) return
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') { e.preventDefault(); onClose() }
+    }
+    window.addEventListener('keydown', handler)
+    return () => window.removeEventListener('keydown', handler)
+  }, [open, onClose])
+}
+
 function ImportModal({ open, onClose, onImport }: {
   open: boolean
   onClose: () => void
   onImport: (item: MediaItem) => void
 }) {
+  useEscapeClose(open, onClose)
   const [title, setTitle] = useState('')
   const [type, setType] = useState<MediaType>('poem')
   const [content, setContent] = useState('')
