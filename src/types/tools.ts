@@ -32,6 +32,10 @@ export type LinguaToolId =
   | 'dreamjournal'
   | 'pronunciationlab'
   | 'keyboardtrainer'
+  | 'skit-trainer'
+  | 'reading-prep'
+  | 'sentence-creator'
+  | 'vocab-lifecycle'
   // Hub views (Practice sub-category landing pages)
   | 'reading-hub'
   | 'writing-hub'
@@ -73,6 +77,8 @@ export const TOOLS: ToolDef[] = [
   { id: 'reading', label: 'Reading', icon: '\u{1F4D6}', description: 'Interactive text reading', category: 'practice', practiceGroup: 'reading' },
   { id: 'rsvp', label: 'Speed Reader', icon: '\u{26A1}', description: 'RSVP speed reading with unknown word detection', category: 'practice', practiceGroup: 'reading' },
   { id: 'documents', label: 'Documents', icon: '\u{1F4C4}', description: 'Read real-world documents with vocabulary help', category: 'practice', practiceGroup: 'reading' },
+  { id: 'skit-trainer', label: 'Memorize', icon: '\u{1F3AD}', description: 'Memorize poems, songs, dialogues, and speeches', category: 'practice', practiceGroup: 'reading' },
+  { id: 'reading-prep', label: 'Reading Prep', icon: '\u{1F4CB}', description: 'Prepare for reading by learning unknown words first', category: 'practice', practiceGroup: 'reading' },
 
   // --- Practice: Writing tools ---
   { id: 'writing', label: 'Writing', icon: '\u270D\uFE0F', description: 'Practice writing with AI correction', category: 'practice', practiceGroup: 'writing' },
@@ -95,6 +101,7 @@ export const TOOLS: ToolDef[] = [
   { id: 'wordassociation', label: 'Word Association', icon: '\u{1F50D}', description: 'Find related words from your vocabulary', category: 'practice', practiceGroup: 'games' },
   { id: 'flashcards', label: 'Flashcards', icon: '\u{1F0CF}', description: 'Spaced repetition review', category: 'practice', practiceGroup: 'games' },
   { id: 'keyboardtrainer', label: 'Keyboard', icon: '\u{2328}\uFE0F', description: 'Practice typing in target language', category: 'practice', practiceGroup: 'games' },
+  { id: 'vocab-lifecycle', label: 'Vocab Lifecycle', icon: '\u{1F331}', description: 'Take new words from introduction to mastery in 4 stages', category: 'practice', practiceGroup: 'games' },
 
   // --- Library ---
   { id: 'wordbank', label: 'Word Bank', icon: '\u{1F4DA}', description: 'Browse & manage vocabulary', category: 'library' },
@@ -106,6 +113,7 @@ export const TOOLS: ToolDef[] = [
   { id: 'achievements', label: 'Achievements', icon: '\u{1F3C6}', description: 'Badges, XP, and milestones', category: 'library' },
   { id: 'dashboard', label: 'Progress', icon: '\u{1F4CA}', description: 'Track your learning', category: 'library' },
   { id: 'feedback-admin', label: 'Feedback', icon: '\u{1F4CB}', description: 'View user feedback & analytics', category: 'library' },
+  { id: 'sentence-creator', label: 'Sentence Creator', icon: '\u270D\uFE0F', description: 'Create sentences, exercises & worksheets from vocabulary', category: 'library' },
 
   // --- Community ---
   { id: 'community', label: 'Community', icon: '\u{1F30D}', description: 'Leaderboard, shared lists, friends', category: 'community' },
@@ -128,9 +136,9 @@ export const PRACTICE_HUB_IDS: LinguaToolId[] = [
 
 /** Map from hub ID to the individual tool IDs it contains */
 export const HUB_TOOL_MAP: Record<string, LinguaToolId[]> = {
-  'reading-hub':   ['prelearn', 'stories', 'cloze', 'reading', 'rsvp', 'documents'],
+  'reading-hub':   ['prelearn', 'stories', 'cloze', 'reading', 'rsvp', 'documents', 'skit-trainer', 'reading-prep'],
   'writing-hub':   ['writing', 'dreamjournal', 'phrases'],
   'speaking-hub':  ['speaking', 'scenarios', 'pronunciationlab'],
   'listening-hub': ['listening'],
-  'games-hub':     ['flashcards', 'match', 'fillblank', 'multichoice', 'speedtyping', 'wordassociation', 'keyboardtrainer'],
+  'games-hub':     ['flashcards', 'match', 'fillblank', 'multichoice', 'speedtyping', 'wordassociation', 'keyboardtrainer', 'vocab-lifecycle'],
 }

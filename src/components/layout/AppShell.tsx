@@ -44,6 +44,10 @@ const LearningJourneyPage = lazy(() => import('@/components/home/LearningJourney
 const DreamJournal = lazy(() => import('@/components/writing/DreamJournal').then(m => ({ default: m.DreamJournal })))
 const PronunciationLab = lazy(() => import('@/components/speaking/PronunciationLab').then(m => ({ default: m.PronunciationLab })))
 const KeyboardTrainer = lazy(() => import('@/components/games/KeyboardTrainer').then(m => ({ default: m.KeyboardTrainer })))
+const SkitTrainer = lazy(() => import('@/components/tools/SkitTrainer').then(m => ({ default: m.SkitTrainer })))
+const ReadingPrep = lazy(() => import('@/components/reading/ReadingPrep').then(m => ({ default: m.ReadingPrep })))
+const SentenceCreator = lazy(() => import('@/components/tools/SentenceCreator').then(m => ({ default: m.SentenceCreator })))
+const VocabLifecycle = lazy(() => import('@/components/tools/VocabLifecycle').then(m => ({ default: m.VocabLifecycle })))
 
 // Hub components
 const ReadingHub = lazy(() => import('@/components/hubs/ReadingHub').then(m => ({ default: m.ReadingHub })))
@@ -79,7 +83,7 @@ function isMobileTabActive(tabId: LinguaToolId, activeTool: LinguaToolId): boole
 
   // Library tab
   if (tabId === 'wordbank') {
-    const libraryTools: LinguaToolId[] = ['wordbank', 'upload', 'media', 'universe', 'grammar', 'journey', 'achievements', 'dashboard', 'feedback-admin']
+    const libraryTools: LinguaToolId[] = ['wordbank', 'upload', 'media', 'universe', 'grammar', 'journey', 'achievements', 'dashboard', 'feedback-admin', 'sentence-creator']
     return libraryTools.includes(activeTool)
   }
 
@@ -126,6 +130,10 @@ function ToolContent({ toolId }: { toolId: LinguaToolId }) {
     case 'dreamjournal': return <DreamJournal />
     case 'pronunciationlab': return <PronunciationLab />
     case 'keyboardtrainer': return <KeyboardTrainer />
+    case 'skit-trainer': return <SkitTrainer />
+    case 'reading-prep': return <ReadingPrep />
+    case 'sentence-creator': return <SentenceCreator />
+    case 'vocab-lifecycle': return <VocabLifecycle />
     // Hub views
     case 'reading-hub': return <ReadingHub />
     case 'writing-hub': return <WritingHub />

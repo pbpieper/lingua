@@ -64,6 +64,7 @@ export function Walkthrough() {
       stories: 'Stories', grammar: 'Grammar', phrases: 'Phrases', universe: 'Universe', teacher: 'School', community: 'Community', achievements: 'Achievements', dashboard: 'Progress', 'feedback-admin': 'Feedback', settings: 'Settings',
       rsvp: 'RSVP Reader', scenarios: 'Scenarios', documents: 'Documents', journey: 'Journey',
       dreamjournal: 'Dream Journal', pronunciationlab: 'Pronunciation', keyboardtrainer: 'Keyboard',
+      'skit-trainer': 'Memorize', 'reading-prep': 'Reading Prep', 'sentence-creator': 'Sentence Creator', 'vocab-lifecycle': 'Vocab Lifecycle',
       'reading-hub': 'Reading', 'writing-hub': 'Writing', 'speaking-hub': 'Speaking',
       'listening-hub': 'Listening', 'games-hub': 'Games',
     }
