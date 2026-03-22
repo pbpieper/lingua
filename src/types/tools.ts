@@ -32,8 +32,14 @@ export type LinguaToolId =
   | 'dreamjournal'
   | 'pronunciationlab'
   | 'keyboardtrainer'
+  // Hub views (Practice sub-category landing pages)
+  | 'reading-hub'
+  | 'writing-hub'
+  | 'speaking-hub'
+  | 'listening-hub'
+  | 'games-hub'
 
-export type ToolCategory = 'home' | 'practice' | 'track' | 'social'
+export type ToolCategory = 'home' | 'practice' | 'library' | 'community'
 
 /** Practice sub-groups for the sidebar */
 export type PracticeGroup = 'reading' | 'writing' | 'speaking' | 'listening' | 'games'
@@ -51,12 +57,16 @@ export interface ToolDef {
 export const TOOLS: ToolDef[] = [
   // --- Home ---
   { id: 'home', label: 'Home', icon: '\u{1F3E0}', description: 'Daily review hub', category: 'home' },
-  { id: 'wordbank', label: 'Word Bank', icon: '\u{1F4DA}', description: 'Browse & manage vocabulary', category: 'home' },
-  { id: 'upload', label: 'Upload', icon: '\u{1F4E4}', description: 'Import vocabulary lists', category: 'home' },
-  { id: 'media', label: 'Media Library', icon: '\u{1F3AD}', description: 'Import poems, songs, skits & texts to learn from', category: 'home' },
   { id: 'settings', label: 'Settings', icon: '\u2699\uFE0F', description: 'Profile and preferences', category: 'home' },
 
-  // --- Practice: Reading ---
+  // --- Practice: Hub views (sidebar-level entries) ---
+  { id: 'reading-hub', label: 'Reading', icon: '\u{1F4D6}', description: 'Reading practice tools', category: 'practice', practiceGroup: 'reading' },
+  { id: 'writing-hub', label: 'Writing', icon: '\u270D\uFE0F', description: 'Writing practice tools', category: 'practice', practiceGroup: 'writing' },
+  { id: 'speaking-hub', label: 'Speaking', icon: '\u{1F5E3}\uFE0F', description: 'Speaking practice tools', category: 'practice', practiceGroup: 'speaking' },
+  { id: 'listening-hub', label: 'Listening', icon: '\u{1F442}', description: 'Listening practice tools', category: 'practice', practiceGroup: 'listening' },
+  { id: 'games-hub', label: 'Games', icon: '\u{1F3AE}', description: 'Practice games', category: 'practice', practiceGroup: 'games' },
+
+  // --- Practice: Reading tools (rendered inside ReadingHub) ---
   { id: 'prelearn', label: 'Pre-Learn', icon: '\u{1F3AF}', description: 'Prepare for a text by learning unknown words first', category: 'practice', practiceGroup: 'reading' },
   { id: 'stories', label: 'Stories', icon: '\u{1F4D5}', description: 'AI-generated graded reading', category: 'practice', practiceGroup: 'reading' },
   { id: 'cloze', label: 'Sentence Cloze', icon: '\u{1F4DD}', description: 'Fill in missing words in context sentences', category: 'practice', practiceGroup: 'reading' },
@@ -64,17 +74,17 @@ export const TOOLS: ToolDef[] = [
   { id: 'rsvp', label: 'Speed Reader', icon: '\u{26A1}', description: 'RSVP speed reading with unknown word detection', category: 'practice', practiceGroup: 'reading' },
   { id: 'documents', label: 'Documents', icon: '\u{1F4C4}', description: 'Read real-world documents with vocabulary help', category: 'practice', practiceGroup: 'reading' },
 
-  // --- Practice: Writing ---
+  // --- Practice: Writing tools ---
   { id: 'writing', label: 'Writing', icon: '\u270D\uFE0F', description: 'Practice writing with AI correction', category: 'practice', practiceGroup: 'writing' },
   { id: 'phrases', label: 'Phrases', icon: '\u{1F4AC}', description: 'Practice real-world phrase scenarios', category: 'practice', practiceGroup: 'writing' },
   { id: 'dreamjournal', label: 'Dream Journal', icon: '\u{1F4D4}', description: 'Daily writing practice with vocabulary analysis', category: 'practice', practiceGroup: 'writing' },
 
-  // --- Practice: Speaking ---
+  // --- Practice: Speaking tools ---
   { id: 'speaking', label: 'Speaking', icon: '\u{1F5E3}\uFE0F', description: 'Pronunciation & conversation', category: 'practice', practiceGroup: 'speaking' },
   { id: 'pronunciationlab', label: 'Pronunciation Lab', icon: '\u{1F399}\uFE0F', description: 'Record, compare, and improve pronunciation', category: 'practice', practiceGroup: 'speaking' },
   { id: 'scenarios', label: 'Scenarios', icon: '\u{1F3AF}', description: 'Survival phrases for real-world situations', category: 'practice', practiceGroup: 'speaking' },
 
-  // --- Practice: Listening ---
+  // --- Practice: Listening tools ---
   { id: 'listening', label: 'Listening', icon: '\u{1F442}', description: 'Hear words and type what you hear', category: 'practice', practiceGroup: 'listening' },
 
   // --- Practice: Games ---
@@ -86,17 +96,20 @@ export const TOOLS: ToolDef[] = [
   { id: 'flashcards', label: 'Flashcards', icon: '\u{1F0CF}', description: 'Spaced repetition review', category: 'practice', practiceGroup: 'games' },
   { id: 'keyboardtrainer', label: 'Keyboard', icon: '\u{2328}\uFE0F', description: 'Practice typing in target language', category: 'practice', practiceGroup: 'games' },
 
-  // --- Track ---
-  { id: 'dashboard', label: 'Progress', icon: '\u{1F4CA}', description: 'Track your learning', category: 'track' },
-  { id: 'universe', label: 'Universe', icon: '\u{1F30C}', description: 'Your vocabulary galaxy', category: 'track' },
-  { id: 'achievements', label: 'Achievements', icon: '\u{1F3C6}', description: 'Badges, XP, and milestones', category: 'track' },
-  { id: 'grammar', label: 'Grammar', icon: '\u{1F4D0}', description: 'AI-generated grammar lessons with exercises', category: 'track' },
-  { id: 'journey', label: 'Journey', icon: '\u{1F5FA}\uFE0F', description: 'Your learning path and milestones', category: 'track' },
-  { id: 'feedback-admin', label: 'Feedback', icon: '\u{1F4CB}', description: 'View user feedback & analytics', category: 'track' },
+  // --- Library ---
+  { id: 'wordbank', label: 'Word Bank', icon: '\u{1F4DA}', description: 'Browse & manage vocabulary', category: 'library' },
+  { id: 'upload', label: 'Upload', icon: '\u{1F4E4}', description: 'Import vocabulary lists', category: 'library' },
+  { id: 'media', label: 'Media Library', icon: '\u{1F3AD}', description: 'Import poems, songs, skits & texts to learn from', category: 'library' },
+  { id: 'universe', label: 'Universe', icon: '\u{1F30C}', description: 'Your vocabulary galaxy', category: 'library' },
+  { id: 'grammar', label: 'Grammar', icon: '\u{1F4D0}', description: 'AI-generated grammar lessons with exercises', category: 'library' },
+  { id: 'journey', label: 'Journey', icon: '\u{1F5FA}\uFE0F', description: 'Your learning path and milestones', category: 'library' },
+  { id: 'achievements', label: 'Achievements', icon: '\u{1F3C6}', description: 'Badges, XP, and milestones', category: 'library' },
+  { id: 'dashboard', label: 'Progress', icon: '\u{1F4CA}', description: 'Track your learning', category: 'library' },
+  { id: 'feedback-admin', label: 'Feedback', icon: '\u{1F4CB}', description: 'View user feedback & analytics', category: 'library' },
 
-  // --- Social ---
-  { id: 'teacher', label: 'Teacher', icon: '\u{1F3EB}', description: 'Manage classes & assignments', category: 'social' },
-  { id: 'community', label: 'Community', icon: '\u{1F30D}', description: 'Leaderboard, shared lists, friends', category: 'social' },
+  // --- Community ---
+  { id: 'community', label: 'Community', icon: '\u{1F30D}', description: 'Leaderboard, shared lists, friends', category: 'community' },
+  { id: 'teacher', label: 'School', icon: '\u{1F3EB}', description: 'Manage classes & assignments', category: 'community' },
 ]
 
 /** Practice group display config */
@@ -107,3 +120,17 @@ export const PRACTICE_GROUPS: { key: PracticeGroup; label: string; icon: string 
   { key: 'listening', label: 'Listening', icon: '\u{1F442}' },
   { key: 'games', label: 'Games', icon: '\u{1F3AE}' },
 ]
+
+/** Hub tool IDs that serve as practice category landing pages */
+export const PRACTICE_HUB_IDS: LinguaToolId[] = [
+  'reading-hub', 'writing-hub', 'speaking-hub', 'listening-hub', 'games-hub',
+]
+
+/** Map from hub ID to the individual tool IDs it contains */
+export const HUB_TOOL_MAP: Record<string, LinguaToolId[]> = {
+  'reading-hub':   ['prelearn', 'stories', 'cloze', 'reading', 'rsvp', 'documents'],
+  'writing-hub':   ['writing', 'dreamjournal', 'phrases'],
+  'speaking-hub':  ['speaking', 'scenarios', 'pronunciationlab'],
+  'listening-hub': ['listening'],
+  'games-hub':     ['flashcards', 'match', 'fillblank', 'multichoice', 'speedtyping', 'wordassociation', 'keyboardtrainer'],
+}

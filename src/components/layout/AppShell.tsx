@@ -44,16 +44,52 @@ const LearningJourneyPage = lazy(() => import('@/components/home/LearningJourney
 const DreamJournal = lazy(() => import('@/components/writing/DreamJournal').then(m => ({ default: m.DreamJournal })))
 const PronunciationLab = lazy(() => import('@/components/speaking/PronunciationLab').then(m => ({ default: m.PronunciationLab })))
 const KeyboardTrainer = lazy(() => import('@/components/games/KeyboardTrainer').then(m => ({ default: m.KeyboardTrainer })))
-import { TOOLS } from '@/types/tools'
+
+// Hub components
+const ReadingHub = lazy(() => import('@/components/hubs/ReadingHub').then(m => ({ default: m.ReadingHub })))
+const WritingHub = lazy(() => import('@/components/hubs/WritingHub').then(m => ({ default: m.WritingHub })))
+const SpeakingHub = lazy(() => import('@/components/hubs/SpeakingHub').then(m => ({ default: m.SpeakingHub })))
+const ListeningHub = lazy(() => import('@/components/hubs/ListeningHub').then(m => ({ default: m.ListeningHub })))
+const GamesHub = lazy(() => import('@/components/hubs/GamesHub').then(m => ({ default: m.GamesHub })))
+
+import { TOOLS, HUB_TOOL_MAP } from '@/types/tools'
 import type { LinguaToolId } from '@/types/tools'
 
-// Bottom tab bar items for mobile -- maps to top-level sections
+// Bottom tab bar items for mobile -- 4 tabs matching 3-pillar + home
 const MOBILE_TABS: Array<{ id: LinguaToolId; icon: string; label: string }> = [
   { id: 'home', icon: '\u{1F3E0}', label: 'Home' },
-  { id: 'flashcards', icon: '\u{1F4AA}', label: 'Practice' },
-  { id: 'dashboard', icon: '\u{1F4CA}', label: 'Track' },
-  { id: 'community', icon: '\u{1F30D}', label: 'Social' },
+  { id: 'reading-hub', icon: '\u{26A1}', label: 'Practice' },
+  { id: 'wordbank', icon: '\u{1F4DA}', label: 'Library' },
+  { id: 'community', icon: '\u{1F30D}', label: 'Community' },
 ]
+
+/** Check if active tool is within a mobile tab's scope */
+function isMobileTabActive(tabId: LinguaToolId, activeTool: LinguaToolId): boolean {
+  if (tabId === activeTool) return true
+
+  // Home tab
+  if (tabId === 'home') return activeTool === 'home' || activeTool === 'settings'
+
+  // Practice tab — any hub or practice tool
+  if (tabId === 'reading-hub') {
+    const allPracticeTools = Object.values(HUB_TOOL_MAP).flat()
+    const hubIds: LinguaToolId[] = ['reading-hub', 'writing-hub', 'speaking-hub', 'listening-hub', 'games-hub']
+    return hubIds.includes(activeTool) || allPracticeTools.includes(activeTool)
+  }
+
+  // Library tab
+  if (tabId === 'wordbank') {
+    const libraryTools: LinguaToolId[] = ['wordbank', 'upload', 'media', 'universe', 'grammar', 'journey', 'achievements', 'dashboard', 'feedback-admin']
+    return libraryTools.includes(activeTool)
+  }
+
+  // Community tab
+  if (tabId === 'community') {
+    return activeTool === 'community' || activeTool === 'teacher'
+  }
+
+  return false
+}
 
 function ToolContent({ toolId }: { toolId: LinguaToolId }) {
   switch (toolId) {
@@ -90,6 +126,12 @@ function ToolContent({ toolId }: { toolId: LinguaToolId }) {
     case 'dreamjournal': return <DreamJournal />
     case 'pronunciationlab': return <PronunciationLab />
     case 'keyboardtrainer': return <KeyboardTrainer />
+    // Hub views
+    case 'reading-hub': return <ReadingHub />
+    case 'writing-hub': return <WritingHub />
+    case 'speaking-hub': return <SpeakingHub />
+    case 'listening-hub': return <ListeningHub />
+    case 'games-hub': return <GamesHub />
     default: return <p className="text-[var(--color-text-muted)]">Select a tool</p>
   }
 }
@@ -224,8 +266,6 @@ export function AppShell() {
               </div>
             </div>
 
-            {/* Mobile-only status — hidden to reduce noise for casual users */}
-
             <ActiveStudyBanner />
 
             <ErrorBoundary>
@@ -237,11 +277,11 @@ export function AppShell() {
         </main>
       </div>
 
-      {/* Mobile bottom tab bar */}
+      {/* Mobile bottom tab bar — 4 tabs: Home, Practice, Library, Community */}
       <nav className="fixed bottom-0 left-0 right-0 z-30 md:hidden border-t border-[var(--color-border)] bg-[var(--color-surface)] safe-area-pb">
         <div className="flex items-center justify-around py-1.5 px-2">
           {MOBILE_TABS.map(tab => {
-            const active = activeTool === tab.id
+            const active = isMobileTabActive(tab.id, activeTool)
             return (
               <button
                 key={tab.id}
@@ -254,7 +294,7 @@ export function AppShell() {
               >
                 <span className={`text-lg transition-transform ${active ? 'scale-110' : ''}`}>{tab.icon}</span>
                 <span className={`text-[10px] font-medium ${active ? 'font-bold' : ''}`}>{tab.label}</span>
-                {tab.id === 'flashcards' && wordsDue > 0 && (
+                {tab.id === 'reading-hub' && wordsDue > 0 && (
                   <span className="absolute top-0 right-1 w-2 h-2 rounded-full bg-orange-500" />
                 )}
               </button>

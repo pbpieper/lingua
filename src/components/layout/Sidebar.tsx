@@ -1,13 +1,15 @@
-import { useState, useEffect, useRef, useMemo } from 'react'
+import { useMemo } from 'react'
 import { useApp } from '@/context/AppContext'
 import { usePreferences } from '@/hooks/usePreferences'
-import { TOOLS, PRACTICE_GROUPS } from '@/types/tools'
+import { TOOLS, PRACTICE_GROUPS, HUB_TOOL_MAP } from '@/types/tools'
 import type { LinguaToolId, ToolDef } from '@/types/tools'
 
 /** Tools always visible regardless of progress (from day 1) */
 const ALWAYS_VISIBLE: Set<LinguaToolId> = new Set([
   'home', 'wordbank', 'flashcards', 'upload', 'settings',
   'teacher', 'community',
+  // Hub entries are always visible
+  'reading-hub', 'writing-hub', 'speaking-hub', 'listening-hub', 'games-hub',
 ])
 
 /** Tier 2: unlock after 10 flashcard reviews */
@@ -32,21 +34,18 @@ function getToolVisibility(ctx: UnlockCtx): { visible: Set<LinguaToolId>; nextUn
   const visible = new Set<LinguaToolId>(ALWAYS_VISIBLE)
   let nextUnlock: string | null = null
 
-  // Tier 2: 10+ flashcard reviews
   if (ctx.totalReviewed >= 10) {
     for (const t of TIER_2_TOOLS) visible.add(t)
   } else if (!nextUnlock) {
     nextUnlock = `Review ${10 - ctx.totalReviewed} more card${ctx.totalReviewed === 9 ? '' : 's'} to unlock practice games`
   }
 
-  // Tier 3: 7+ days used OR 50+ total words
   if (ctx.daysUsed >= 7 || ctx.totalWords >= 50) {
     for (const t of TIER_3_TOOLS) visible.add(t)
   } else if (!nextUnlock) {
     nextUnlock = 'Keep learning to unlock production tools'
   }
 
-  // Tier 4: 100+ words mastered
   if (ctx.wordsMastered >= 100) {
     for (const t of TIER_4_TOOLS) visible.add(t)
   } else if (!nextUnlock) {
@@ -72,43 +71,35 @@ export function Sidebar({ onToolClick, dueCount = 0 }: {
   const { prefs, setPref } = usePreferences()
   const adminMode = useMemo(() => isAdminMode(), [])
 
-  const [collapsed, setCollapsed] = useState<Record<string, boolean>>(() => {
-    const stored = prefs.sidebarCollapsed
-    return { ...stored }
-  })
-
   const { visible, nextUnlock } = useMemo(
     () => getToolVisibility({ totalReviewed, totalWords, wordsMastered, daysUsed }),
     [totalReviewed, totalWords, wordsMastered, daysUsed]
   )
-
-  useEffect(() => {
-    setPref('sidebarCollapsed', collapsed)
-  }, [collapsed, setPref])
 
   const handleClick = (toolId: LinguaToolId) => {
     setActiveTool(toolId)
     onToolClick?.(toolId)
   }
 
-  const toggleGroup = (key: string) => {
-    setCollapsed(prev => ({ ...prev, [key]: !prev[key] }))
-  }
-
   const showAll = prefs.showAllTools
 
-  // Build data for each section
-  const homeTools = TOOLS.filter(t => t.category === 'home')
-  const trackTools = TOOLS.filter(t => t.category === 'track')
-  const socialTools = TOOLS.filter(t => t.category === 'social')
+  // Check if active tool belongs to a practice group (for highlighting hub entries)
+  const activeInHub = (hubId: string): boolean => {
+    if (activeTool === hubId) return true
+    const toolIds = HUB_TOOL_MAP[hubId]
+    return toolIds ? toolIds.includes(activeTool) : false
+  }
 
-  // Practice sub-groups
-  const practiceSubGroups = PRACTICE_GROUPS.map(pg => ({
-    key: pg.key,
-    label: pg.label,
-    icon: pg.icon,
-    tools: TOOLS.filter(t => t.category === 'practice' && t.practiceGroup === pg.key),
-  }))
+  // Build sections
+  const libraryTools = TOOLS.filter(t => t.category === 'library')
+  const communityTools = TOOLS.filter(t => t.category === 'community')
+
+  // Practice hub entries (one per group)
+  const practiceHubs = PRACTICE_GROUPS.map(pg => {
+    const hubId = `${pg.key}-hub` as LinguaToolId
+    const def = TOOLS.find(t => t.id === hubId)
+    return { ...pg, hubId, def }
+  })
 
   return (
     <nav className="w-[220px] h-full shrink-0 border-r border-[var(--color-border)] bg-[var(--color-surface)] flex flex-col overflow-y-auto">
@@ -118,47 +109,28 @@ export function Sidebar({ onToolClick, dueCount = 0 }: {
       </div>
 
       <div className="flex-1 px-2 py-2 flex flex-col gap-0.5 overflow-y-auto">
-        {/* HOME section -- flat list, no group header */}
-        {homeTools.map(tool => {
-          const isVisible = showAll || visible.has(tool.id)
-          if (!isVisible) return null
-          return (
-            <ToolButton
-              key={tool.id}
-              tool={tool}
-              active={activeTool === tool.id}
-              onClick={() => handleClick(tool.id)}
-            />
-          )
-        })}
+        {/* HOME */}
+        <ToolButton
+          tool={{ id: 'home', label: 'Home', icon: '\u{1F3E0}', description: '', category: 'home' }}
+          active={activeTool === 'home'}
+          onClick={() => handleClick('home')}
+        />
 
-        {/* PRACTICE section with sub-categories */}
+        {/* PRACTICE section */}
         <SectionDivider label="Practice" />
-        {practiceSubGroups.map(group => {
-          const displayTools = showAll ? group.tools : group.tools.filter(t => visible.has(t.id))
-          const lockedCount = showAll ? 0 : group.tools.length - displayTools.length
-          if (displayTools.length === 0 && lockedCount === 0) return null
-          return (
-            <SubGroup
-              key={group.key}
-              label={group.label}
-              icon={group.icon}
-              tools={displayTools}
-              lockedCount={lockedCount}
-              isCollapsed={!!collapsed[`practice:${group.key}`]}
-              onToggle={() => toggleGroup(`practice:${group.key}`)}
-              activeTool={activeTool}
-              onToolClick={handleClick}
-              showAll={showAll}
-              badgeCount={group.key === 'games' ? dueCount : undefined}
-            />
-          )
-        })}
+        {practiceHubs.map(({ key, label, icon, hubId }) => (
+          <ToolButton
+            key={hubId}
+            tool={{ id: hubId, label, icon, description: '', category: 'practice' }}
+            active={activeInHub(hubId)}
+            onClick={() => handleClick(hubId)}
+            badgeCount={key === 'games' ? dueCount : undefined}
+          />
+        ))}
 
-        {/* TRACK section -- flat list */}
-        <SectionDivider label="Track" />
-        {trackTools.map(tool => {
-          // Hide feedback-admin unless admin mode is active
+        {/* LIBRARY section */}
+        <SectionDivider label="Library" />
+        {libraryTools.map(tool => {
           if (tool.id === 'feedback-admin' && !adminMode) return null
           const isVisible = showAll || visible.has(tool.id)
           if (!isVisible) return null
@@ -172,9 +144,9 @@ export function Sidebar({ onToolClick, dueCount = 0 }: {
           )
         })}
 
-        {/* SOCIAL section -- flat list */}
-        <SectionDivider label="Social" />
-        {socialTools.map(tool => {
+        {/* COMMUNITY section */}
+        <SectionDivider label="Community" />
+        {communityTools.map(tool => {
           const isVisible = showAll || visible.has(tool.id)
           if (!isVisible) return null
           return (
@@ -220,96 +192,12 @@ function SectionDivider({ label }: { label: string }) {
   )
 }
 
-/** Expandable/collapsible sub-group within Practice */
-function SubGroup({
-  label,
-  icon,
-  tools,
-  lockedCount,
-  isCollapsed,
-  onToggle,
-  activeTool,
-  onToolClick,
-  showAll,
-  badgeCount,
-}: {
-  label: string
-  icon: string
-  tools: ToolDef[]
-  lockedCount: number
-  isCollapsed: boolean
-  onToggle: () => void
-  activeTool: LinguaToolId
-  onToolClick: (id: LinguaToolId) => void
-  showAll: boolean
-  badgeCount?: number
-}) {
-  const contentRef = useRef<HTMLDivElement>(null)
-  const [height, setHeight] = useState<number | undefined>(undefined)
-  const hasActiveChild = tools.some(t => t.id === activeTool)
-
-  useEffect(() => {
-    if (contentRef.current) {
-      setHeight(contentRef.current.scrollHeight)
-    }
-  }, [tools.length])
-
-  return (
-    <div className="mt-0.5">
-      <button
-        onClick={onToggle}
-        className={`w-full flex items-center gap-1.5 px-3 py-1.5 cursor-pointer border-none bg-transparent rounded-md transition-colors
-          ${hasActiveChild && isCollapsed ? 'bg-[var(--color-primary-faded)]' : 'hover:bg-[var(--color-surface-alt)]'}`}
-      >
-        <span
-          className="text-[10px] text-[var(--color-text-muted)] leading-none transition-transform duration-200"
-          style={{ transform: isCollapsed ? 'rotate(0deg)' : 'rotate(90deg)' }}
-        >
-          &#9656;
-        </span>
-        <span className="text-xs">{icon}</span>
-        <span className={`text-xs tracking-wide font-semibold ${hasActiveChild ? 'text-[var(--color-primary-dark)]' : 'text-[var(--color-text-muted)]'}`}>
-          {label}
-        </span>
-        {badgeCount !== undefined && badgeCount > 0 && (
-          <span className="ml-auto text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-orange-100 text-orange-600 dark:bg-orange-900/30 dark:text-orange-400">
-            {badgeCount}
-          </span>
-        )}
-        {!showAll && lockedCount > 0 && (
-          <span className="ml-auto text-[10px] text-[var(--color-text-muted)]">
-            +{lockedCount}
-          </span>
-        )}
-      </button>
-      <div
-        style={{
-          maxHeight: isCollapsed ? 0 : height ?? 'none',
-          overflow: 'hidden',
-          transition: 'max-height 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
-        }}
-      >
-        <div ref={contentRef} className="flex flex-col gap-0.5 pt-0.5 pl-3">
-          {tools.map(tool => (
-            <ToolButton
-              key={tool.id}
-              tool={tool}
-              active={activeTool === tool.id}
-              onClick={() => onToolClick(tool.id)}
-              nested
-            />
-          ))}
-        </div>
-      </div>
-    </div>
-  )
-}
-
-function ToolButton({ tool, active, onClick, nested }: {
+function ToolButton({ tool, active, onClick, nested, badgeCount }: {
   tool: ToolDef
   active: boolean
   onClick: () => void
   nested?: boolean
+  badgeCount?: number
 }) {
   return (
     <button
@@ -324,6 +212,11 @@ function ToolButton({ tool, active, onClick, nested }: {
     >
       <span className={active ? 'grayscale-0' : 'opacity-70'}>{tool.icon}</span>
       <span className="truncate">{tool.label}</span>
+      {badgeCount !== undefined && badgeCount > 0 && (
+        <span className="ml-auto text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-orange-100 text-orange-600 dark:bg-orange-900/30 dark:text-orange-400">
+          {badgeCount}
+        </span>
+      )}
     </button>
   )
 }

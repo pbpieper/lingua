@@ -21,7 +21,6 @@ import {
 import { buildDailySessionSteps, recordStepCompletion, categoryLabel, categoryIcon } from '@/services/dailySessionPlan'
 import { SessionDebrief } from '@/components/home/SessionDebrief'
 import { FeedbackCollector, shouldShowWelcomeBack } from '@/components/feedback/FeedbackCollector'
-import { CulturalTip } from '@/components/home/CulturalTip'
 import { ClipboardCapture } from '@/components/home/ClipboardCapture'
 
 /* ------------------------------------------------------------------ */
@@ -75,28 +74,6 @@ function formatDate(): string {
   return new Date().toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' })
 }
 
-function timeAgo(dateStr: string): string {
-  const diffMs = Date.now() - new Date(dateStr).getTime()
-  const m = Math.floor(diffMs / 60_000)
-  if (m < 1) return 'just now'
-  if (m < 60) return `${m}m ago`
-  const h = Math.floor(m / 60)
-  if (h < 24) return `${h}h ago`
-  const d = Math.floor(h / 24)
-  return d === 1 ? 'yesterday' : `${d}d ago`
-}
-
-function toolLabel(toolId: string): string {
-  const map: Record<string, string> = {
-    flashcards: 'Flashcards', match: 'Match Game', fillblank: 'Fill in the Blank',
-    multichoice: 'Quiz', speaking: 'Speaking', reading: 'Reading',
-    wordbank: 'Word Bank', upload: 'Upload', dashboard: 'Dashboard',
-    stories: 'Stories', cloze: 'Sentence Cloze', prelearn: 'Pre-Learn',
-    listening: 'Listening', writing: 'Writing', phrases: 'Phrases',
-  }
-  return map[toolId] ?? toolId
-}
-
 /* Category-specific accent colors for the cards */
 const CATEGORY_COLORS: Record<string, { bg: string; bgDark: string; border: string; text: string; icon: string }> = {
   'new-words': { bg: 'bg-violet-50', bgDark: 'dark:bg-violet-950/20', border: 'border-violet-200 dark:border-violet-800/40', text: 'text-violet-700 dark:text-violet-300', icon: 'text-violet-500' },
@@ -122,18 +99,6 @@ const cardItem = {
   hidden: { opacity: 0, y: 10 },
   visible: { opacity: 1, y: 0, transition: { duration: 0.25 } },
 }
-
-/* Practice quick-access tools */
-const PRACTICE_TOOLS: { id: LinguaToolId; icon: string; label: string }[] = [
-  { id: 'flashcards', icon: '\u{1F0CF}', label: 'Flashcards' },
-  { id: 'match', icon: '\u{1F517}', label: 'Match' },
-  { id: 'multichoice', icon: '\u2753', label: 'Quiz' },
-  { id: 'speaking', icon: '\u{1F5E3}\uFE0F', label: 'Speaking' },
-  { id: 'listening', icon: '\u{1F442}', label: 'Listening' },
-  { id: 'writing', icon: '\u270D\uFE0F', label: 'Writing' },
-  { id: 'stories', icon: '\u{1F4D5}', label: 'Stories' },
-  { id: 'reading', icon: '\u{1F4D6}', label: 'Reading' },
-]
 
 /* ------------------------------------------------------------------ */
 /*  Main component                                                     */
@@ -169,9 +134,7 @@ export function DailyReview() {
 
   // Derived values
   const totalWords = stats?.total_words ?? 0
-  const wordsLearned = stats?.words_learned ?? 0
   const wordsDue = stats?.words_due ?? 0
-  const accuracy = stats?.accuracy ?? 0
   const streak = typeof stats?.streak === 'object' ? stats.streak.current : (stats?.streak ?? 0)
   const newWordsTarget = loadLearningPrefs().targetNewWordsPerDay
   const level = getUserLevel()
@@ -258,9 +221,6 @@ export function DailyReview() {
             <div className="h-4 w-32 rounded bg-[var(--color-surface-alt)]" />
           </div>
         </div>
-        <div className="grid grid-cols-4 gap-3">
-          {[1,2,3,4].map(i => <div key={i} className="h-16 rounded-lg bg-[var(--color-surface-alt)]" />)}
-        </div>
         <div className="h-3 rounded-full bg-[var(--color-surface-alt)]" />
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
           {[1,2,3,4,5,6].map(i => <div key={i} className="h-36 rounded-xl bg-[var(--color-surface-alt)]" />)}
@@ -277,7 +237,7 @@ export function DailyReview() {
   return (
     <motion.div initial="hidden" animate="visible" variants={stagger} className="space-y-5">
 
-      {/* Welcome Header */}
+      {/* ---- 1. Welcome Header (compact one-liner) ---- */}
       <motion.div variants={fadeUp}>
         <div className="flex items-center justify-between gap-4">
           <div className="min-w-0">
@@ -310,25 +270,6 @@ export function DailyReview() {
         <div className="mt-2"><LanguageSwitcher compact /></div>
       </motion.div>
 
-      {/* Quick Stats Row */}
-      {totalWords > 0 && (
-        <motion.div variants={fadeUp}>
-          <div className="grid grid-cols-4 gap-2">
-            <QuickStat icon="&#128218;" value={wordsLearned} label="Known" onClick={() => setActiveTool('universe')} />
-            <QuickStat icon="&#128337;" value={wordsDue} label="Due" warn={wordsDue > 0} onClick={() => setActiveTool('flashcards')} />
-            <QuickStat icon="&#127919;" value={`${Math.round(accuracy)}%`} label="Accuracy" accent={accuracy >= 70} />
-            <QuickStat icon="&#128336;" value={`~${planTotalMinutes}m`} label="Today" />
-          </div>
-        </motion.div>
-      )}
-
-      {/* Cultural Tip of the Day */}
-      {onboarding?.targetLanguage && (
-        <motion.div variants={fadeUp}>
-          <CulturalTip targetLanguage={onboarding.targetLanguage} />
-        </motion.div>
-      )}
-
       {/* Import prompt (empty state) */}
       {totalWords === 0 && (
         <motion.div variants={fadeUp}>
@@ -346,7 +287,7 @@ export function DailyReview() {
         </motion.div>
       )}
 
-      {/* Daily Study Plan */}
+      {/* ---- 2. Today's Study Plan ---- */}
       {studyPlan.length > 0 && (
         <>
           <motion.div variants={fadeUp}>
@@ -388,62 +329,43 @@ export function DailyReview() {
         </motion.div>
       )}
 
-      {/* New Words Bank Status */}
+      {/* ---- 3. Three Navigation Cards ---- */}
+      <motion.div variants={fadeUp}>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <NavCard
+            icon={<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>}
+            title="Practice"
+            subtitle="Explore all practice tools"
+            accentClass="text-indigo-500 dark:text-indigo-400"
+            bgClass="bg-indigo-50 dark:bg-indigo-950/20"
+            borderClass="border-indigo-200 dark:border-indigo-800/40"
+            onClick={() => setActiveTool('reading-hub')}
+          />
+          <NavCard
+            icon={<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>}
+            title="Library"
+            subtitle="Your words, media, and progress"
+            accentClass="text-emerald-500 dark:text-emerald-400"
+            bgClass="bg-emerald-50 dark:bg-emerald-950/20"
+            borderClass="border-emerald-200 dark:border-emerald-800/40"
+            onClick={() => setActiveTool('wordbank')}
+          />
+          <NavCard
+            icon={<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>}
+            title="Community"
+            subtitle="Friends, global, and school"
+            accentClass="text-amber-500 dark:text-amber-400"
+            bgClass="bg-amber-50 dark:bg-amber-950/20"
+            borderClass="border-amber-200 dark:border-amber-800/40"
+            onClick={() => setActiveTool('community')}
+          />
+        </div>
+      </motion.div>
+
+      {/* New Words Bank Status (keep — contextually useful) */}
       {totalWords > 0 && (
         <motion.div variants={fadeUp}>
           <NewWordsBankStatus totalWords={totalWords} newWordsTarget={newWordsTarget} setActiveTool={setActiveTool} />
-        </motion.div>
-      )}
-
-      {/* Quick Practice Access */}
-      {totalWords > 0 && (
-        <motion.div variants={fadeUp}>
-          <h2 className="text-sm font-bold text-[var(--color-text-primary)] mb-3">Quick Practice</h2>
-          <div className="grid grid-cols-4 sm:grid-cols-8 gap-2">
-            {PRACTICE_TOOLS.map(t => (
-              <button key={t.id} onClick={() => setActiveTool(t.id)}
-                className="flex flex-col items-center gap-1.5 py-3 px-1 rounded-xl cursor-pointer transition-all hover:scale-105 active:scale-95 bg-[var(--color-surface)] border border-[var(--color-border)] hover:border-[var(--color-primary-light)] hover:shadow-sm">
-                <span className="text-xl">{t.icon}</span>
-                <span className="text-[10px] font-medium text-[var(--color-text-secondary)] leading-tight text-center">{t.label}</span>
-              </button>
-            ))}
-          </div>
-        </motion.div>
-      )}
-
-      {/* Recent Activity */}
-      {sessions.length > 0 && (
-        <motion.div variants={fadeUp}>
-          <h2 className="text-sm font-bold text-[var(--color-text-primary)] mb-3">Recent Activity</h2>
-          <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] divide-y divide-[var(--color-border)] overflow-hidden">
-            {sessions.slice(0, 5).map(session => (
-              <div key={session.id} className="flex items-center justify-between px-4 py-3">
-                <div className="flex items-center gap-3 min-w-0">
-                  <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-[var(--color-primary-faded)] text-[var(--color-primary-dark)] shrink-0">{toolLabel(session.tool_id)}</span>
-                  <span className="text-sm text-[var(--color-text-secondary)] truncate">
-                    {session.words_reviewed} word{session.words_reviewed === 1 ? '' : 's'}
-                    {session.correct > 0 && <span className="text-[var(--color-correct)]"> &middot; {session.correct} correct</span>}
-                  </span>
-                </div>
-                <span className="text-xs text-[var(--color-text-muted)] shrink-0 ml-3">{timeAgo(session.ended_at ?? session.started_at)}</span>
-              </div>
-            ))}
-          </div>
-        </motion.div>
-      )}
-
-      {/* Your Lists */}
-      {lists.length > 0 && (
-        <motion.div variants={fadeUp}>
-          <h2 className="text-sm font-bold text-[var(--color-text-primary)] mb-3">Your Lists</h2>
-          <div className="flex flex-wrap gap-2">
-            {lists.map(list => (
-              <button key={list.id} onClick={() => { setCurrentListId(list.id); setActiveTool('wordbank') }}
-                className="px-3 py-1.5 rounded-full text-xs font-medium border border-[var(--color-border)] bg-[var(--color-surface)] hover:border-[var(--color-primary-light)] hover:bg-[var(--color-primary-pale)] transition-colors cursor-pointer text-[var(--color-text-secondary)]">
-                {list.name}<span className="ml-1.5 text-[var(--color-text-muted)]">{list.word_count}</span>
-              </button>
-            ))}
-          </div>
         </motion.div>
       )}
 
@@ -484,19 +406,23 @@ export function DailyReview() {
 /*  Sub-components                                                     */
 /* ------------------------------------------------------------------ */
 
-function QuickStat({ icon, value, label, warn, accent, onClick }: {
-  icon: string; value: string | number; label: string; warn?: boolean; accent?: boolean; onClick?: () => void
+function NavCard({ icon, title, subtitle, accentClass, bgClass, borderClass, onClick }: {
+  icon: React.ReactNode; title: string; subtitle: string
+  accentClass: string; bgClass: string; borderClass: string
+  onClick: () => void
 }) {
-  const Tag = onClick ? 'button' : 'div'
   return (
-    <Tag
+    <button
       onClick={onClick}
-      className={`rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2.5 text-center transition-all ${onClick ? 'cursor-pointer hover:border-[var(--color-primary-light)] hover:shadow-sm' : ''}`}
+      className={`flex flex-col items-start gap-3 rounded-xl px-5 py-5 text-left cursor-pointer transition-all hover:scale-[1.02] active:scale-[0.98] border ${bgClass} ${borderClass} hover:shadow-md`}
     >
-      <div className="text-xs mb-0.5" dangerouslySetInnerHTML={{ __html: icon }} />
-      <div className={`text-base font-bold leading-tight ${warn ? 'text-orange-600 dark:text-orange-400' : accent ? 'text-[var(--color-correct)]' : 'text-[var(--color-text-primary)]'}`}>{value}</div>
-      <div className="text-[10px] text-[var(--color-text-muted)] mt-0.5">{label}</div>
-    </Tag>
+      <div className={accentClass}>{icon}</div>
+      <div>
+        <p className="text-sm font-bold text-[var(--color-text-primary)]">{title}</p>
+        <p className="text-xs text-[var(--color-text-muted)] mt-0.5">{subtitle}</p>
+      </div>
+      <span className="text-[var(--color-text-muted)] text-sm ml-auto">&rarr;</span>
+    </button>
   )
 }
 

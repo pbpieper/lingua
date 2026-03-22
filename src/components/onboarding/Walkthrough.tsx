@@ -61,9 +61,11 @@ export function Walkthrough() {
       multichoice: 'Quiz', speedtyping: 'Speed Typing', wordassociation: 'Word Association',
       speaking: 'Speaking', reading: 'Reading',
       prelearn: 'Pre-Learn', listening: 'Listening', writing: 'Writing', cloze: 'Sentence Cloze',
-      stories: 'Stories', grammar: 'Grammar', phrases: 'Phrases', universe: 'Universe', teacher: 'Teacher', community: 'Community', achievements: 'Achievements', dashboard: 'Progress', 'feedback-admin': 'Feedback', settings: 'Settings',
+      stories: 'Stories', grammar: 'Grammar', phrases: 'Phrases', universe: 'Universe', teacher: 'School', community: 'Community', achievements: 'Achievements', dashboard: 'Progress', 'feedback-admin': 'Feedback', settings: 'Settings',
       rsvp: 'RSVP Reader', scenarios: 'Scenarios', documents: 'Documents', journey: 'Journey',
       dreamjournal: 'Dream Journal', pronunciationlab: 'Pronunciation', keyboardtrainer: 'Keyboard',
+      'reading-hub': 'Reading', 'writing-hub': 'Writing', 'speaking-hub': 'Speaking',
+      'listening-hub': 'Listening', 'games-hub': 'Games',
     }
     const label = labels[toolId]
     let targetBtn: Element | null = null
