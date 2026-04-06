@@ -12,6 +12,19 @@ dist
 dist-ssr
 *.local
 
+# Environment
+.env.local
+.env*.local
+
+# Supabase
+supabase/.temp/
+
+# Vercel
+.vercel
+
+# Claude
+.claude/
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
